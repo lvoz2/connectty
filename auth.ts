@@ -3,7 +3,7 @@ import mariadb from "mariadb";
 import "dotenv/config";
 
 const pool = mariadb.createPool({
-	host: process.env.MDB_HOST,
+	host: "127.0.0.1",
 	user: process.env.MDB_USER,
 	password: process.env.MDB_PASSWORD,
 	connectionLimit: 5,

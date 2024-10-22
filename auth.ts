@@ -15,8 +15,8 @@ async function createUser(username, password) {
 	try {
 		const hash = await argon2.hash(password, {
 		    type: argon2.argon2id,
-		    memoryCost: 12 * 1024,
-		    timeCost: 3,
+		    memoryCost: 128 * 1024,
+		    timeCost: 1,
 		    parallelism: 1,
 		});
 		console.log("test");

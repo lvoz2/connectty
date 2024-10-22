@@ -25,7 +25,7 @@ async function createUser(username, password) {
 		const insert = await conn.query("INSERT INTO Users (Username, Password) VALUES (" + username + ", " + hash + ");");
 		console.log(insert);
 	} catch (err) {
-		throw err;
+		return err.toString();
 	} finally {
 		if (conn) conn.end();
 	}

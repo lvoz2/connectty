@@ -32,9 +32,9 @@ app.get("/hello", (req, res) => {
 	res.send("Hello World")
 });
 
-app.get("/test-auth", (req, res) => {
-	res.send(auth.createUser("test", "password"));
-	test = auth.validateCredentials("test", "password"));
+app.get("/test-auth", async function(req, res) {
+	res.send(await auth.createUser("test", "password"));
+	test = await auth.validateCredentials("test", "password"));
 	if (test) res.send(test);
 });
 

@@ -2,14 +2,28 @@
 <html>
 <head>
 	<title>Login</title>
-	<script src="https://www.google.com/recaptcha/api.js"></script>
 	<script src="https://www.google.com/recaptcha/api.js?render=6LdHimkqAAAAAOXLRndbYvcmN3dzYjvLz7-5QBAD"></script>
+	<script src="/js/login.js"></script>
+	<script>
+		window.addEventListener("load", (e) => {
+			"use strict"
+			const submit = document.querySelector("#submit");
+			submit.addEventListener("click", submitLogin);
+		});
+	</script>
 </head>
 <body>
 	<div id="container">
-		<input type="text" placeholder="Username"></input>
-		<input type="password" placeholder="Password"></input>
-		<button id="submit" class="g-recaptcha" data-sitekey="reCAPTCHA_site_key" data-callback="onSubmit" data-action="submit">Login</button>
+		<div class="row">
+			<input id="username" type="text" placeholder="Username"></input>
+		</div>
+		<div class="row">
+			<input id="password" type="password" placeholder="Password"></input>
+		</div>
+		<div class="row">
+			<button id="submit">Login</button>
+			<input type="checkbox" disabled id="captcha-status"></input>
+		</div>
 	</div>
 </body>
 </html>

@@ -8,6 +8,7 @@
     "dotenv": "npm:dotenv@^16.4.5",
     "express": "npm:express@^4.21.1",
     "helmet": "npm:helmet@^8.0.0",
+    "isomorphic-fetch": "npm:isomorphic-fetch@^3.0.0",
     "mariadb": "npm:mariadb@^3.3.2",
     "ssh2": "npm:ssh2@^1.16.0",
     "toobusy-js": "npm:toobusy-js@^0.5.1"

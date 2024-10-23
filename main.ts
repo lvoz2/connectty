@@ -3,6 +3,8 @@ import sshProxy from "./sshProxy.ts";
 import auth from "./auth.ts";
 import helmet from "helmet";
 import toobusy from "toobusy-js";
+import fetch from "isomorphic-fetch";
+import "dotenv/config";
 
 const app = express();
 
@@ -36,8 +38,17 @@ app.get("/hello", (req, res) => {
 app.post("/auth", async function(req, res) {
 	const username = req.body.username;
 	const password = req.body.password;
-	
+	console.log(username + " " + password);
+	res.send("Success");
 	//auth.validateCredentials(username, password);
+});
+
+app.post("/captcha", (req, res) => {
+	const secret_key = process.env.CAPTCHA_SECRET_KEY;
+	const token = req.body.token;
+	console.log(`${token} ${secret_key}`);
+	const url = "https://www.google.com/recaptcha/api/siteverify?secret=" + secret_key + "&response=" + token;
+	fetch(url, {method: 'post'}).then(response => response.json()).then(google_response => res.json({ google_response })).catch(error => res.json({ error }));
 });
 
 app.get("/ssh/update", sshProxy.update);

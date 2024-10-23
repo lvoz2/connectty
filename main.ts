@@ -5,9 +5,10 @@ import helmet from "helmet";
 import toobusy from "toobusy-js";
 
 const app = express();
-let test;
 
+app.use(express.static("static"));
 app.use(express.json());
+
 app.use(helmet({
 	contentSecurityPolicy: false,
 	xContentTypeOptions: false,
@@ -32,18 +33,11 @@ app.get("/hello", (req, res) => {
 	res.send("Hello World")
 });
 
-app.get("/test-auth", async function(req, res) {
-	res.send(await auth.createUser("test", "password"));
-	test = await auth.validateCredentials("test", "password"));
-	if (test) res.send(test);
-});
-
-app.get("/test-auth-update", (req, res) => {
-	if (test) {
-		res.send(test);
-	} else {
-		res.json({status: "not ready"});
-	}
+app.post("/auth", async function(req, res) {
+	const username = req.body.username;
+	const password = req.body.password;
+	
+	//auth.validateCredentials(username, password);
 });
 
 app.get("/ssh/update", sshProxy.update);

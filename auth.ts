@@ -3,49 +3,66 @@ import mariadb from "mariadb";
 import "dotenv/config";
 
 const pool = mariadb.createPool({
-	host: "127.0.0.1",
+	host: process.env.MDB_HOST,
 	user: process.env.MDB_USER,
 	password: process.env.MDB_PASSWORD,
 	connectionLimit: 5,
 	database: process.env.MDB_DB
 });
 
-async function createUser(username, password) {
+async function isUniqueUsername(username) {
 	let conn;
+	let isUnique = false;
 	try {
-		const hash = await argon2.hash(password, {
-		    type: argon2.argon2id,
-		    memoryCost: 128 * 1024,
-		    timeCost: 1,
-		    parallelism: 1,
-		});
-		console.log("test");
 		conn = await pool.getConnection();
-		console.log("Test");
-		const insert = await conn.query("INSERT INTO Users (Username, Password) VALUES (" + username + ", " + hash + ");");
-		console.log(insert);
+		const users = await conn.query("SELECT Username FROM Users WHERE Username = \"" + username + "\";");
+		isUnique = (users.length == 0);
 	} catch (err) {
 		return err.toString();
 	} finally {
 		if (conn) conn.end();
 	}
+	return isUnique;
+}
+
+async function createUser(username, password) {
+	let conn;
+	let status = "";
+	try {
+		if (await isUniqueUsername(username)) {
+			const hash = await argon2.hash(password, {
+			    type: argon2.argon2id,
+			    memoryCost: 64 * 1024,
+			    timeCost: 2,
+			    parallelism: 1,
+			});
+			conn = await pool.getConnection();
+			const insert = await conn.query("INSERT INTO Users (Username, Password) VALUES (\"" + username + "\", \"" + hash + "\");");
+			const users = await conn.query("SELECT Username FROM Users WHERE Username = \"" + username + "\";");
+			status = (users.length == 1) ? "Success" : "SQL Failed";
+		} else {
+			status = "Username already in use";
+		}
+	} catch (err) {
+		//err.toString();
+		throw err;
+	} finally {
+		if (conn) conn.end();
+	}
+	return status;
 }
 
 async function validateCredentials(username, password) {
 	let conn;
-	let status;
+	let status = false;
 	try {
 		conn = await pool.getConnection();
-		const user_password = await conn.query("SELECT Username, Password FROM Users WHERE Username = " + username + ";");
-		console.log(user_password);
-		status = user_password;
-		/*
-		if (await argon2.verify("<big long hash>", password)) {
-			console.log("Success");
-		} else {
-			console.log("Failure");
+		const result = await conn.query("SELECT Username, Password FROM Users WHERE Username = \"" + username + "\";");
+		let password_hash;
+		if (result.length == 1) {
+			password_hash = result[0]["Password"];
+			status = await argon2.verify(password_hash, password);
 		}
-		*/
 	} catch (err) {
 		throw err;
 	} finally {
@@ -54,5 +71,5 @@ async function validateCredentials(username, password) {
 	return status;
 }
 
-const auth = {"createUser": createUser, "validateCredentials": validateCredentials};
+const auth = {"createUser": createUser, "validateCredentials": validateCredentials, "isUniqueUsername": isUniqueUsername};
 export default auth;

@@ -8,8 +8,14 @@
 	<script>
 		window.addEventListener("load", (e) => {
 			"use strict"
-			const submit = document.querySelector("#submit");
-			submit.addEventListener("click", submitLogin);
+			const loginE = document.querySelector("#login");
+			const registerE = document.querySelector("#register");
+			loginE.addEventListener("click", (e) => {
+				runCaptcha(e, submitLogin)
+			});
+			registerE.addEventListener("click", (e) => {
+				runCaptcha(e, submitRegister)
+			});
 		});
 	</script>
 </head>
@@ -22,7 +28,8 @@
 			<input id="password" type="password" placeholder="Password"></input>
 		</div>
 		<div class="row">
-			<button id="submit">Login</button>
+			<button id="register">Register</button>
+			button id="login">Login</button>
 			<input type="checkbox" disabled id="captcha-status"></input>
 		</div>
 	</div>

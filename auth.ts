@@ -12,24 +12,24 @@ const pool = mariadb.createPool({
 
 async function isUniqueUsername(username) {
 	let conn;
-	let isUnique = false;
+	let numUsers;
 	try {
 		conn = await pool.getConnection();
 		const users = await conn.query("SELECT Username FROM Users WHERE Username = \"" + username + "\";");
-		isUnique = (users.length == 0);
+		numUsers = users.length;
 	} catch (err) {
 		return err.toString();
 	} finally {
 		if (conn) conn.end();
 	}
-	return isUnique;
+	return numUsers;
 }
 
 async function createUser(username, password) {
 	let conn;
 	let status = "";
 	try {
-		if (await isUniqueUsername(username)) {
+		if ((await isUniqueUsername(username)) == 0) {
 			const hash = await argon2.hash(password, {
 			    type: argon2.argon2id,
 			    memoryCost: 64 * 1024,
@@ -37,8 +37,8 @@ async function createUser(username, password) {
 			    parallelism: 1,
 			});
 			conn = await pool.getConnection();
-			const insert = await conn.query("INSERT INTO Users (Username, Password) VALUES (\"" + username + "\", \"" + hash + "\");");
-			const users = await conn.query("SELECT Username FROM Users WHERE Username = \"" + username + "\";");
+			const insert = await conn.query("INSERT INTO Users (Username, Password) VALUES (\"?\", \"?\");", [username, hash]);
+			const users = await conn.query("SELECT Username FROM Users WHERE Username = \"?\";", [username]);
 			status = (users.length == 1) ? "Success" : "SQL Failed";
 		} else {
 			status = "Username already in use";
@@ -57,7 +57,7 @@ async function validateCredentials(username, password) {
 	let status = false;
 	try {
 		conn = await pool.getConnection();
-		const result = await conn.query("SELECT Username, Password FROM Users WHERE Username = \"" + username + "\";");
+		const result = await conn.query("SELECT Username, Password FROM Users WHERE Username = \"?\";", [username]);
 		let password_hash;
 		if (result.length == 1) {
 			password_hash = result[0]["Password"];

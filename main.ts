@@ -35,12 +35,33 @@ app.get("/hello", (req, res) => {
 	res.send("Hello World")
 });
 
-app.post("/auth", async function(req, res) {
+app.post("/auth", async (req, res) => {
 	const username = req.body.username;
 	const password = req.body.password;
-	console.log(username + " " + password);
-	res.send("Success");
-	//auth.validateCredentials(username, password);
+	let validated = false;
+	// validate
+	if (validated) {
+		if ((await auth.isUniqueUsername(username)) == 1) {
+			/*
+			const success = await auth.validateCredentials(username, password);
+			if (success) {
+				res.json(await )
+			}
+			*/
+		}
+	}
+});
+
+app.post("/register", async (req, res) => {
+	const username = req.body.username;
+	const password = req.body.password;
+	let validated = false;
+	// validate
+	if (validated) {
+		if ((await auth.isUniqueUsername(username)) == 1) {
+			//auth.createUser(username, password);
+		}
+	}
 });
 
 app.post("/captcha", (req, res) => {

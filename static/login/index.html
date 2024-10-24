@@ -4,20 +4,7 @@
 	<title>Login</title>
 	<script async defer src="https://www.google.com/recaptcha/api.js?render=6LdHimkqAAAAAOXLRndbYvcmN3dzYjvLz7-5QBAD"></script>
 	<script async defer src="https://unpkg.com/@simplewebauthn/browser@11.0.0/dist/bundle/index.umd.min.js" integrity="sha256-wq+EnUV4y898iNDTZlUskMKtQBekDog9pff6y7/Xj7Y=" crossorigin="anonymous"></script>
-	<script src="/js/login.js" integrity="sha256-gY7Jck7yXca/fyP8aIL7UOniTG2xGx0YSvHbShFC1u0="></script>
-	<script>
-		window.addEventListener("load", (e) => {
-			"use strict"
-			const loginE = document.querySelector("#login");
-			const registerE = document.querySelector("#register");
-			loginE.addEventListener("click", (e) => {
-				runCaptcha(e, submitLogin)
-			});
-			registerE.addEventListener("click", (e) => {
-				runCaptcha(e, submitRegister)
-			});
-		});
-	</script>
+	<script src="/js/login.js" integrity="sha256-lX5YQ1akmgszZFAXk5l/W8s76vcPStCQ0jxFaM5B4v8="></script>
 </head>
 <body>
 	<div id="container">
@@ -29,7 +16,7 @@
 		</div>
 		<div class="row">
 			<button id="register">Register</button>
-			button id="login">Login</button>
+			<button id="login">Login</button>
 			<input type="checkbox" disabled id="captcha-status"></input>
 		</div>
 	</div>

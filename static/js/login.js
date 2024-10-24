@@ -1,3 +1,16 @@
+"use strict";
+
+window.addEventListener("load", (e) => {
+	const loginE = document.querySelector("#login");
+	const registerE = document.querySelector("#register");
+	loginE.addEventListener("click", (e) => {
+		runCaptcha(e, submitLogin)
+	});
+	registerE.addEventListener("click", (e) => {
+		runCaptcha(e, submitRegister)
+	});
+});
+
 function submitLogin(e) {
 	console.log("Human")
 	const username = document.querySelector("#username").value;

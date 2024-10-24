@@ -1,5 +1,6 @@
 import argon2 from "argon2";
 import mariadb from "mariadb";
+import { v4 as uuidv4 } from "uuid";
 import "dotenv/config";
 
 const pool = mariadb.createPool({
@@ -10,12 +11,12 @@ const pool = mariadb.createPool({
 	database: process.env.MDB_DB
 });
 
-async function isUniqueUsername(username) {
+async function isUniqueUsername(username: string) {
 	let conn;
 	let numUsers;
 	try {
 		conn = await pool.getConnection();
-		const users = await conn.query("SELECT Username FROM Users WHERE Username = \"" + username + "\";");
+		const users = await conn.query("SELECT username FROM users WHERE username = \"" + username + "\";");
 		numUsers = users.length;
 	} catch (err) {
 		return err.toString();
@@ -25,7 +26,7 @@ async function isUniqueUsername(username) {
 	return numUsers;
 }
 
-async function createUser(username, password) {
+async function createUser(username: string, password: string) {
 	let conn;
 	let status = "";
 	try {
@@ -37,8 +38,8 @@ async function createUser(username, password) {
 			    parallelism: 1,
 			});
 			conn = await pool.getConnection();
-			const insert = await conn.query("INSERT INTO Users (Username, Password) VALUES (\"?\", \"?\");", [username, hash]);
-			const users = await conn.query("SELECT Username FROM Users WHERE Username = \"?\";", [username]);
+			const insert = await conn.query("INSERT INTO users (id, username, password) VALUES (\"?\", \"?\");", [uuidv4(), username, hash]);
+			const users = await conn.query("SELECT username FROM users WHERE username = \"?\";", [username]);
 			status = (users.length == 1) ? "Success" : "SQL Failed";
 		} else {
 			status = "Username already in use";
@@ -52,12 +53,12 @@ async function createUser(username, password) {
 	return status;
 }
 
-async function validateCredentials(username, password) {
+async function validateCredentials(username: string, password: string) {
 	let conn;
 	let status = false;
 	try {
 		conn = await pool.getConnection();
-		const result = await conn.query("SELECT Username, Password FROM Users WHERE Username = \"?\";", [username]);
+		const result = await conn.query("SELECT username, password FROM users WHERE username = \"?\";", [username]);
 		let password_hash;
 		if (result.length == 1) {
 			password_hash = result[0]["Password"];
@@ -69,6 +70,10 @@ async function validateCredentials(username, password) {
 		if (conn) conn.end();
 	}
 	return status;
+}
+
+async function createSession() {
+	
 }
 
 const auth = {"createUser": createUser, "validateCredentials": validateCredentials, "isUniqueUsername": isUniqueUsername};

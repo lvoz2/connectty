@@ -2,12 +2,8 @@
 
 window.addEventListener("load", (e) => {
 	const loginE = document.querySelector("#login");
-	const registerE = document.querySelector("#register");
 	loginE.addEventListener("click", (e) => {
 		runCaptcha(e, submitLogin)
-	});
-	registerE.addEventListener("click", (e) => {
-		runCaptcha(e, submitRegister)
 	});
 });
 
@@ -17,27 +13,19 @@ function submitLogin(e) {
 	const password = document.querySelector("#password").value;
 	const credentials = {"username": username, "password": password};
 	fetch("/auth", {
+		credentials: "include",
 		headers: {
 			"Accept": "application/json",
 			"Content-Type": "application/json"
 		},
 		method: "post",
 		body: JSON.stringify(credentials)
-	});
-}
-
-function submitRegister(e) {
-	console.log("Human")
-	const username = document.querySelector("#username").value;
-	const password = document.querySelector("#password").value;
-	const credentials = {"username": username, "password": password};
-	fetch("/register", {
-		headers: {
-			"Accept": "application/json",
-			"Content-Type": "application/json"
-		},
-		method: "post",
-		body: JSON.stringify(credentials)
+	}).then((res) => {
+		return res.json();
+	}).then((json) => {
+		if (json.status == "Success") {
+			//window.location = "https://lvoz2.duckdns.org";
+		}
 	});
 }
 

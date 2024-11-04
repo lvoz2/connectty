@@ -1,31 +1,62 @@
 import argon2 from "argon2";
-import mysql from "mysql2/promise";
+import sqlite3 from "sqlite3";
+import sqlite from "sqlite";
 import { v4 as uuidv4 } from "uuid";
 import "dotenv/config";
 import session from "express-session";
-import MySQLStorePkg from "express-mysql-session";
+import connect from "connect-sqlite3";
 
-const MySQLStore = MySQLStorePkg(session);
+const SQLiteStore = connect(session);
 
-const pool = mysql.createPool({
-	host           : process.env["MDB_HOST"],
-	user           : process.env["MDB_USER"],
-	password       : process.env["MDB_PASSWORD"],
-	connectionLimit: 5,
-	database       : process.env["MDB_DB"]
+const sessionManager = session({
+	proxy: true,
+	store: new SQLiteStore({
+		table: "sessions",
+		db: process.env.DB_NAME,
+		dir: ".",
+	}),
+	name: process.env.SESSION_NAME,
+	resave: false,
+	secret: Buffer.from(process.env.SESSION_SECRET, "hex").toString(),
+	saveUninitialized: false,
+	/*cookie: {
+		domain: "lvoz2.duckdns.org",
+		maxAge: 10800000,
+		path: "/",
+		httpOnly: true,
+		sameSite: "strict",
+		secure: true
+	}*/
 });
 
-const sessionStore = new MySQLStore({"expiration": 3600000}, pool);
+let db: undefined | sqlite.Database;
+
+(async () => {
+	db = await sqlite.open({
+		filename: "./" + process.env.DB_NAME + ".db",
+		driver: sqlite3.Database,
+		mode: sqlite3.OPEN_READWRITE
+	});
+})();
+
+/*const db = new sqlite3.Database(process.env.DB_NAME + ".db", sqlite3.OPEN_READWRITE | sqlite3.OPEN_FULLMUTEX, (err) => {
+	if (err) {
+		console.log("Database could not be opened. Error: " + err);
+		process.exit(1);
+	}
+});*/
 
 async function isUniqueUsername(username: string) {
 	let numUsers;
 	try {
-		const users = await pool.execute("SELECT username FROM users WHERE username = ?;", [username]);
-		if (Array.isArray(users)) {
-			numUsers = users[0].length;
+		const result = await queryDB(db, "SELECT username FROM users WHERE username = ?;", [username]);
+		if (result) {
+			numUsers = result[0].length;
+		} else {
+			console.log("Could not verify username uniqueness: query returned undefined");
 		}
 	} catch (err) {
-		return err.toString();
+		throw err;
 	} finally {
 		// Idk
 	}
@@ -33,6 +64,16 @@ async function isUniqueUsername(username: string) {
 		return numUsers;
 	}
 	throw new TypeError("Result of SQL Query was not an Array");
+}
+
+async function queryDB(db: undefined | sqlite.Database, query: string, params: string[]) {
+	if (db) {
+		const stmt: sqlite.Statement = await db.prepare(query);
+		stmt.bind(params);
+		return await stmt.all();
+	} else {
+		console.log("DB not ready");
+	}
 }
 
 async function createUser(username: string, password: string) {
@@ -46,9 +87,19 @@ async function createUser(username: string, password: string) {
 			    timeCost: 2,
 			    parallelism: 1,
 			});
-			const insert = await pool.execute("INSERT INTO users (id, username, password) VALUES (?, ?, ?);", [uid, username, hash]);
-			const users = await pool.execute("SELECT username FROM users WHERE username = ?;", [username]);
-			status = (Array.isArray(users) && users.length == 1) ? "Success" : "SQL Failed";
+			const insert = await queryDB(db, "INSERT INTO users (id, username, password) VALUES (?, ?, ?);", [uid, username, hash]);
+			const users = await queryDB(db, "SELECT username FROM users WHERE username = ?;", [username]);
+			status = (() => {
+				if (Array.isArray(users)) {
+					if (users.length == 1) {
+						return "Success";
+					} else {
+						return "Duplicate User";
+					}
+				} else {
+					return "SQL Result not an Array";
+				}
+			})();
 		} else {
 			status = "Username already in use";
 		}
@@ -65,13 +116,15 @@ async function validateCredentials(username: string, password: string) {
 	let status = false;
 	let uid;
 	try {
-		const result = await pool.execute("SELECT id, username, password FROM users WHERE username = ?;", [username]);
+		const result = await queryDB(db, "SELECT id, username, password FROM users WHERE username = ?;", [username]);
 		let password_hash;
-		if (Array.isArray(result) && result[0].length == 1) {
-			password_hash = result[0][0]["password"];
-			status = await argon2.verify(password_hash, password);
-			if (status) {
-				uid = result[0][0]["id"];
+		if (Array.isArray(result)) {
+			if (result[0].length == 1) {
+				password_hash = result[0][0]["password"];
+				status = await argon2.verify(password_hash, password);
+				if (status) {
+					uid = result[0][0]["id"];
+				}
 			}
 		}
 	} catch (err) {
@@ -86,5 +139,5 @@ async function validateCredentials(username: string, password: string) {
 	}
 }
 
-const auth = {"createUser": createUser, "validateCredentials": validateCredentials, "isUniqueUsername": isUniqueUsername, "sessionStore": sessionStore, "sessionMiddleware": session};
+const auth = {"createUser": createUser, "validateCredentials": validateCredentials, "isUniqueUsername": isUniqueUsername, "session": sessionManager};
 export default auth;

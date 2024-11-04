@@ -23,9 +23,9 @@ app.use(express.json());
 app.use(auth.sessionMiddleware({
 	proxy: true,
 	store: auth.sessionStore,
-	name: process.env.SESSION_NAME,
+	name: process.env["SESSION_NAME"],
 	resave: false,
-	secret: Buffer.from(process.env.SESSION_SECRET, "hex").toString(),
+	secret: Buffer.from(process.env["SESSION_SECRET"], "hex").toString(),
 	saveUninitialized: false,
 	/*cookie: {
 		domain: "lvoz2.duckdns.org",
@@ -101,7 +101,7 @@ app.post("/auth", async (req: express.Request, res: express.Response, next: expr
 			}
 		}
 	}
-	//res.cookie(process.env.SESSION_NAME, req.session.id, req.session.cookie);
+	//res.cookie(process.env["SESSION_NAME"], req.session.id, req.session.cookie);
 	res.json({"status": statusText});
 });
 
@@ -134,7 +134,7 @@ app.get("/test-auth-status", (req: express.Request, res: express.Response) => {
 });
 
 app.post("/captcha", (req: express.Request, res: express.Response) => {
-	const secret_key = process.env.CAPTCHA_SECRET_KEY;
+	const secret_key = process.env["CAPTCHA_SECRET_KEY"];
 	const token = req.body.token;
 	const url = "https://www.google.com/recaptcha/api/siteverify?secret=" + secret_key + "&response=" + token;
 	fetch(url, {method: 'post'}).then(response => response.json()).then(google_response => res.json({ google_response })).catch(error => res.json({ error }));

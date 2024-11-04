@@ -8,11 +8,11 @@ import MySQLStorePkg from "express-mysql-session";
 const MySQLStore = MySQLStorePkg(session);
 
 const pool = mysql.createPool({
-	host           : process.env.MDB_HOST,
-	user           : process.env.MDB_USER,
-	password       : process.env.MDB_PASSWORD,
+	host           : process.env["MDB_HOST"],
+	user           : process.env["MDB_USER"],
+	password       : process.env["MDB_PASSWORD"],
 	connectionLimit: 5,
-	database       : process.env.MDB_DB
+	database       : process.env["MDB_DB"]
 });
 
 const sessionStore = new MySQLStore({"expiration": 3600000}, pool);

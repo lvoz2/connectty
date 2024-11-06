@@ -1,6 +1,7 @@
+import path from "node:path";
 import express from "express";
-import sshProxy from "./sshProxy";
-import auth from "./auth";
+import sshProxy from "./sshProxy.ts";
+import auth from "./auth.ts";
 import helmet from "helmet";
 import toobusy from "toobusy-js";
 import fetch from "isomorphic-fetch";
@@ -13,7 +14,6 @@ app.set("trust proxy", 1)
 
 app.use(express.static("static"));
 app.use(express.json());
-app.use(auth.session);
 
 const nonAuthorisedEndpoints = ["/", "/login", "/captcha", "/auth", "/test-auth-status"];
 
@@ -37,8 +37,8 @@ app.use(function(req: express.Request, res: express.Response, next) {
 function isAuthenticated(req: express.Request, res: express.Response, next: express.NextFunction) {
 	if (nonAuthorisedEndpoints.includes(req.path)) {
 		next();
-	} else if (req.session.user) {
-		next()
+	//} else if (req.session.user) {
+	//	next()
 	} else {
 		next("route");
 	}
@@ -54,34 +54,7 @@ app.get("/hello", (req: express.Request, res: express.Response) => {
 	res.send("Hello World")
 });
 
-app.post("/auth", async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-	const username = req.body.username;
-	const password = req.body.password;
-	let statusText = "Failed";
-	let validated = true;
-	if (validated) {
-		const unique = (await auth.isUniqueUsername(username));
-		if (unique == 1) {
-			const status = await auth.validateCredentials(username, password);
-			if (status[0]) {
-				statusText = "Success";
-				req.session.regenerate((err) => {
-					if (err) {
-						next(err);
-					}
-					req.session.user = status[1];
-					req.session.save((err) => {
-						if (err) {
-							return next(err);
-						}
-					});
-				});
-			}
-		}
-	}
-	//res.cookie(process.env.SESSION_NAME, req.session.id, req.session.cookie);
-	res.json({"status": statusText});
-});
+app.post("/auth", });
 
 app.post("/register", async (req: express.Request, res: express.Response) => {
 	const username = req.body.username;
@@ -100,6 +73,7 @@ app.post("/register", async (req: express.Request, res: express.Response) => {
 
 app.get("/test-auth-status", (req: express.Request, res: express.Response) => {
 	try {
+		console.log(req.session);
 		console.log(req.session.user);
 		if (req.session.user) {
 			res.send("Success");
@@ -107,7 +81,7 @@ app.get("/test-auth-status", (req: express.Request, res: express.Response) => {
 			res.status(403).send("Failure");
 		}
 	} catch (err) {
-		res.status(403).send("Failure");
+		res.status(403).send("Failure, no session");
 	}
 });
 
@@ -125,7 +99,7 @@ app.use(function(req: express.Request, res: express.Response, next) {
 	res.status(404);
 	// respond with html page
 	if (req.accepts("html")) {
-		res.sendFile(import.meta.dirname + "/http_errors/404.html");
+		res.sendFile(path.resolve("./http_errors/404.html"));
 		return;
 	}
 

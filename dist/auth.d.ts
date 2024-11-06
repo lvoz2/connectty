@@ -1,7 +1,7 @@
 import "dotenv/config";
-declare function isUniqueUsername(username: string): Promise<any>;
+declare function isUniqueUsername(username: string): Promise<number>;
 declare function createUser(username: string, password: string): Promise<string[]>;
-declare function validateCredentials(username: string, password: string): Promise<any[]>;
+declare function validateCredentials(username: string, password: string): Promise<string[]>;
 declare const auth: {
     createUser: typeof createUser;
     validateCredentials: typeof validateCredentials;

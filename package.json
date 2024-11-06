@@ -4,8 +4,13 @@
   "description": "My personal website's server, wriiten in TypeScript",
   "main": "dist/index.js",
   "scripts": {
-    "test": "tests/test_main.js"
+    "test": "tests/test_main.js",
+    "build-pkgroll": "rm dist/* && tsc && npx pkgroll",
+    "build-babel": "rm dist/* && tsc && babel src --extensions '.ts' -d dist",
+    "serve-tsx": "tsx watch src/index.ts",
+    "serve-node": "node --watch dist/index.js"
   },
+  "exports": "./dist/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lvoz2/ts-server.git"
@@ -24,6 +29,7 @@
     "express-session": "^1.18.1",
     "helmet": "^8.0.0",
     "isomorphic-fetch": "^3.0.0",
+    "jsonwebtoken": "^9.0.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "ssh2": "^1.16.0",
@@ -32,12 +38,20 @@
     "uuid": "^11.0.2"
   },
   "devDependencies": {
+    "@babel/cli": "^7.25.9",
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-typescript": "^7.26.0",
     "@types/connect-sqlite3": "^0.9.5",
     "@types/express-mysql-session": "^3.0.6",
     "@types/isomorphic-fetch": "^0.0.39",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.8.6",
     "@types/ssh2": "^1.15.1",
-    "@types/toobusy-js": "^0.5.4"
+    "@types/toobusy-js": "^0.5.4",
+    "pkgroll": "^2.5.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
   },
   "type": "module"
 }

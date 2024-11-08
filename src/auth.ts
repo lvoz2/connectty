@@ -4,6 +4,8 @@ import { open, Database, Statement } from "sqlite";
 import { v4 as uuidv4 } from "uuid";
 import "dotenv/config";
 
+interface JWTAuthPayload {}
+
 let db: undefined | Database;
 
 (async () => {
@@ -109,7 +111,7 @@ async function validateCredentials(username: string, password: string): Promise<
 	return [status];
 }
 
-async function authenticate(req: express.Request, res: express.Response) {
+export async function authenticate(req: express.Request, res: express.Response) {
 	const username = req.body.username;
 	const password = req.body.password;
 	let statusText = "Failed";
@@ -127,17 +129,26 @@ async function authenticate(req: express.Request, res: express.Response) {
 	res.json({"status": statusText});
 }
 
-function checkJWT(jwt: string) {
+function checkAccess(jwt: string, resource: string): boolean {
 
 }
 
-function createJWT(payload: JWTAuthPayload): string {
+function createJWT(payload: JWTAuthPayload | string | Buffer): string {
     const token = jwt.sign(payload, process.env.JWT_Key);
     return token;
 }
 
-async function register(req: express.Request, res: express.Response) {
+export async function register(req: express.Request, res: express.Response) {
 }
 
-const auth = {"isUniqueUsername": isUniqueUsername};
-export default auth;
+export function createAuthMiddleware(nonAuthorisedEndpoints: string[]) {
+	return function(req: express.Request, res: express.Response, next: express.NextFunction) {
+		if (nonAuthorisedEndpoints.includes(req.path)) {
+			next();
+		} else if (checkAccess(jwt, req.path)) {
+			next()
+		} else {
+			next("route");
+		}
+	}
+}

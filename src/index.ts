@@ -34,16 +34,6 @@ app.use(function(req: express.Request, res: express.Response, next) {
 	}
 });
 
-function isAuthenticated(req: express.Request, res: express.Response, next: express.NextFunction) {
-	if (nonAuthorisedEndpoints.includes(req.path)) {
-		next();
-	//} else if (req.session.user) {
-	//	next()
-	} else {
-		next("route");
-	}
-}
-
 app.use(isAuthenticated);
 
 app.post("/echo", (req: express.Request, res: express.Response) => {

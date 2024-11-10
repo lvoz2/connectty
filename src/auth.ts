@@ -144,16 +144,11 @@ export function createAuthRoute(cookieOptions: express.CookieOptions) {
 	}
 }
 
-async function checkAccess(jwt: boolean | string, resource: string, options?: JWT.VerifyOptions & { endpoints?: RequiredEndpointAuth }): Promise<boolean> {
+async function checkAccess(jwt: string, resource: string, options?: JWT.VerifyOptions & { endpoints?: RequiredEndpointAuth }): Promise<boolean> {
 	const JWTKey = process.env.JWT_KEY;
 	try {
-		const couldBeJWT = ((jwt !== false) && (jwt != undefined));
-		if (couldBeJWT) {
-			const isJWT = validator.isJWT(jwt);
-			if (!isJWT) {
-				return false;
-			}
-		} else {
+		const isJWT = validator.isJWT(jwt);
+		if (!isJWT) {
 			return false;
 		}
 	} catch (err) {
@@ -176,7 +171,7 @@ async function checkAccess(jwt: boolean | string, resource: string, options?: JW
 				}
 			}
 			if (!canAccess && "urls" in payload && Array.isArray(payload.urls)) {
-				canAccess = payload.urls.includes(resource);
+				canAccess = validateURLArray(payload.urls) && payload.urls.includes(resource);
 			}
 			return canAccess;
 		} else {
@@ -235,13 +230,26 @@ async function createAuthJWT(lvl: string, urls?: string[]): Promise<string> {
 	throw new Error("NanoID Collision Found");
 }
 
+function validateURLArray(urls: string[]): boolean {
+	return urls.reduce((acc, e) => {
+		return acc && validator.isURL(e, {
+			protocols: ["http","https"],
+			require_tld: false,
+			require_host: false,
+			allow_underscores: true,
+			allow_protocol_relative_urls: true,
+			allow_query_components: false,
+		});
+	}, true);
+}
+
 export function createRegisterRoute(cookieOptions: express.CookieOptions) {
 	return async function register(req: express.Request, res: express.Response) {
 		const username = req.body.username;
 		const password = req.body.password;
 		const permsLevel = req.body.permsLevel || "basic";
-		const urls = Array.isArray(req.body.urls) ? req.body.urls : null;
-		let validated = true;
+		const urls = (Array.isArray(req.body.urls) && validateURLArray(req.body.urls)) ? req.body.urls : null;
+		let validated = urls != undefined;
 		let status = "Failed";
 		// validate
 		if (validated) {
@@ -257,10 +265,10 @@ export function createRegisterRoute(cookieOptions: express.CookieOptions) {
 
 export function createCheckAuthMiddleware(endpoints: RequiredEndpointAuth) {
 	return async function(req: express.Request, res: express.Response, next: express.NextFunction) {
-		const jwt: string | boolean = req.signedCookies[process.env.COOKIE_NAME];
+		const jwt: string | false = req.signedCookies[process.env.COOKIE_NAME];
 		if (endpoints.none.includes(req.path)) {
 			next();
-		} else if (await checkAccess(jwt, req.path, {"endpoints": endpoints})) {
+		} else if (jwt !== false && await checkAccess(jwt, req.path, {"endpoints": endpoints})) {
 			next()
 		} else {
 			next("route");

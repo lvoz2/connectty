@@ -7,16 +7,25 @@ import toobusy from "toobusy-js";
 import fetch from "isomorphic-fetch";
 import "dotenv/config";
 import { Buffer } from "node:buffer";
+import cookieParser from "cookie-parser";
 
 const app = express();
+const endpoints = {"none": ["/", "/login", "/captcha", "/auth"], "full": ["/test-auth-status"]};
+const cookieOptions: express.CookieOptions = {
+	domain: "lvoz2.duckdns.org",
+	maxAge: 3600000,
+	path: "/",
+	httpOnly: true,
+	sameSite: "strict",
+	secure: true,
+	signed: true
+};
 
 app.set("trust proxy", 1)
 
 app.use(express.static("static"));
 app.use(express.json());
-
-const nonAuthorisedEndpoints = ["/", "/login", "/captcha", "/auth", "/test-auth-status"];
-
+app.use(cookieParser(process.env.COOKIE_KEY));
 app.use(helmet({
 	contentSecurityPolicy: false,
 	xContentTypeOptions: false,
@@ -24,7 +33,6 @@ app.use(helmet({
 	crossOriginResourcePolicy: false,
 	referrerPolicy: false,
 }));
-
 app.use(function(req: express.Request, res: express.Response, next) {
 	if (toobusy()) {
 		// log if you see necessary
@@ -34,72 +42,42 @@ app.use(function(req: express.Request, res: express.Response, next) {
 	}
 });
 
-app.use(isAuthenticated);
-
-app.post("/echo", (req: express.Request, res: express.Response) => {
+app.post("/echo", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
 	res.json(req.body);
 });
 
-app.get("/hello", (req: express.Request, res: express.Response) => {
+app.get("/hello", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
 	res.send("Hello World")
 });
 
-app.post("/auth", });
+app.post("/auth", auth.createCheckAuthMiddleware(endpoints), auth.createAuthRoute(cookieOptions));
 
-app.post("/register", async (req: express.Request, res: express.Response) => {
-	const username = req.body.username;
-	const password = req.body.password;
-	let validated = true;
-	let status = "Failed";
-	// validate
-	if (validated) {
-		if ((await auth.isUniqueUsername(username)) == 0) {
-			const sqlStatus = await auth.createUser(username, password);
-			status = sqlStatus[0] ? "Successful Creation of User" : "Failed";
-		}
-	}
-	res.json({"status": status});
+app.post("/register", auth.createCheckAuthMiddleware(endpoints), auth.createRegisterRoute(cookieOptions));
+
+app.get("/test-auth-status", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
+	res.json({"status":"Success"});
 });
 
-app.get("/test-auth-status", (req: express.Request, res: express.Response) => {
-	try {
-		console.log(req.session);
-		console.log(req.session.user);
-		if (req.session.user) {
-			res.send("Success");
-		} else {
-			res.status(403).send("Failure");
-		}
-	} catch (err) {
-		res.status(403).send("Failure, no session");
-	}
-});
-
-app.post("/captcha", (req: express.Request, res: express.Response) => {
+app.post("/captcha", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
 	const secret_key = process.env.CAPTCHA_SECRET_KEY;
 	const token = req.body.token;
 	const url = "https://www.google.com/recaptcha/api/siteverify?secret=" + secret_key + "&response=" + token;
 	fetch(url, {method: 'post'}).then(response => response.json()).then(google_response => res.json({ google_response })).catch(error => res.json({ error }));
 });
 
-app.get("/ssh/update", sshProxy.update);
-app.get("/ssh/input", sshProxy.input);
+app.get("/ssh/update", auth.createCheckAuthMiddleware(endpoints), sshProxy.update);
+app.get("/ssh/input", auth.createCheckAuthMiddleware(endpoints), sshProxy.input);
 
 app.use(function(req: express.Request, res: express.Response, next) {
 	res.status(404);
-	// respond with html page
 	if (req.accepts("html")) {
 		res.sendFile(path.resolve("./http_errors/404.html"));
 		return;
 	}
-
-	// respond with json
 	if (req.accepts("json")) {
 		res.json({error: "Not found"});
 		return;
 	}
-
-	// default to plain-text. send()
 	res.type("txt").send("Not found");
 });
 

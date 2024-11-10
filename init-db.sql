@@ -14,8 +14,7 @@ CREATE TABLE credentials (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-CREATE TABLE sessions (
-    id VARCHAR(255) PRIMARY KEY,
-    user_id VARCHAR(255) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+CREATE TABLE jwt (
+    jit CHARACTER(21) PRIMARY KEY,
+    last_used NUMERIC NOT NULL,
 );

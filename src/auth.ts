@@ -3,8 +3,20 @@ import sqlite3 from "sqlite3";
 import { open, Database, Statement } from "sqlite";
 import { v4 as uuidv4 } from "uuid";
 import "dotenv/config";
+import express from "express";
+import JWT from "jsonwebtoken";
+import { nanoid } from "nanoid";
+import validator from "validator";
 
-interface JWTAuthPayload {}
+interface JWTAuthPayload extends JWT.JwtPayload {
+	lvl: string;
+	urls?: string[];
+}
+
+interface RequiredEndpointAuth {
+	none: string[];
+	[key: string]: string[];
+}
 
 let db: undefined | Database;
 
@@ -15,13 +27,6 @@ let db: undefined | Database;
 		mode: sqlite3.OPEN_READWRITE
 	});
 })();
-
-/*const db = new sqlite3.Database(process.env.DB_NAME, sqlite3.OPEN_READWRITE | sqlite3.OPEN_FULLMUTEX, (err) => {
-	if (err) {
-		console.log("Database could not be opened. Error: " + err);
-		process.exit(1);
-	}
-});*/
 
 async function isUniqueUsername(username: string): Promise<number> {
 	let numUsers;
@@ -59,7 +64,7 @@ async function queryDB(db: undefined | Database, query: string, params: string[]
 	}
 }
 
-async function createUser(username: string, password: string): Promise<string[]> {
+async function createUser(username: string, password: string, maxPermsLevel: string): Promise<string[]> {
 	let status = "";
 	let uid = uuidv4();
 	try {
@@ -70,7 +75,7 @@ async function createUser(username: string, password: string): Promise<string[]>
 			    timeCost: 2,
 			    parallelism: 1,
 			});
-			const insert = await queryDB(db, "INSERT INTO users (id, username, password) VALUES (?, ?, ?);", [uid, username, hash]);
+			const insert = await queryDB(db, "INSERT INTO users (id, username, password, max_perms) VALUES (?, ?, ?, ?);", [uid, username, hash, maxPermsLevel]);
 			const users = await queryDB(db, "SELECT username FROM users WHERE username = ?;", [username]);
 			status = users.length == 1 ? "Success" : "";
 		} else {
@@ -88,15 +93,17 @@ async function createUser(username: string, password: string): Promise<string[]>
 async function validateCredentials(username: string, password: string): Promise<string[]> {
 	let status = "Failed";
 	let uid;
+	let permsLevel = "none";
 	try {
-		const result = await queryDB(db, "SELECT id, username, password FROM users WHERE username = ?;", [username]);
+		const result = await queryDB(db, "SELECT id, username, password, max_perms FROM users WHERE username = ?;", [username]);
 		let password_hash;
 		if (Array.isArray(result)) {
-			if (result[0].length == 1) {
-				password_hash = result[0][0]["password"];
+			if (result.length == 1) {
+				password_hash = result[0]["password"];
 				status = await argon2.verify(password_hash, password) ? "Correct credentials" : "Incorrect credentials";
-				if (status) {
-					uid = result[0][0]["id"];
+				if (status === "Correct credentials") {
+					permsLevel = result[0]["max_perms"];
+					uid = result[0]["id"];
 				}
 			}
 		}
@@ -106,49 +113,159 @@ async function validateCredentials(username: string, password: string): Promise<
 		// Idk
 	}
 	if (uid) {
-		return [status, uid];
+		return [status, uid, permsLevel];
 	}
-	return [status];
+	return [status, permsLevel];
 }
 
-export async function authenticate(req: express.Request, res: express.Response) {
-	const username = req.body.username;
-	const password = req.body.password;
-	let statusText = "Failed";
-	let validated = true;
-	if (validated) {
-		const unique = (awaitisUniqueUsername(username));
-		if (unique == 1) {
-			const status = await validateCredentials(username, password);
-			if (status[0]) {
-				statusText = "Success";
+export function createAuthRoute(cookieOptions: express.CookieOptions) {
+	return async function authenticate(req: express.Request, res: express.Response) {
+		const username = req.body.username;
+		const password = req.body.password;
+		let statusText = "Failed";
+		let validated = true;
+		let status;
+		let permsLevel = "none";
+		if (validated) {
+			const unique = (await isUniqueUsername(username));
+			if (unique == 1) {
+				status = await validateCredentials(username, password);
 			}
 		}
+		if (status) {
+			if (status[0]) {
+				statusText = "Success";
+				permsLevel = status[status.length - 1];
+			}
+		}
+		const jwt = await createAuthJWT(permsLevel);
+		res.cookie(process.env.COOKIE_NAME, jwt, cookieOptions);
+		res.json({"status": statusText});
 	}
-	//res.cookie(process.env.SESSION_NAME, req.session.id, req.session.cookie);
-	res.json({"status": statusText});
 }
 
-function checkAccess(jwt: string, resource: string): boolean {
-
+async function checkAccess(jwt: boolean | string, resource: string, options?: JWT.VerifyOptions & { endpoints?: RequiredEndpointAuth }): Promise<boolean> {
+	const JWTKey = process.env.JWT_KEY;
+	try {
+		const couldBeJWT = ((jwt !== false) && (jwt != undefined));
+		if (couldBeJWT) {
+			const isJWT = validator.isJWT(jwt);
+			if (!isJWT) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	} catch (err) {
+		console.log(err);
+		return false;
+	}
+	try {
+		let payload;
+		const payloadSection: JWT.JwtPayload | string = JWT.verify(jwt, JWTKey, options);
+		if (typeof payloadSection === "string") {
+			payload = JSON.parse(payloadSection);
+		} else {
+			payload = payloadSection;
+		}
+		if ("lvl" in payload) {
+			let canAccess = false;
+			if (options) {
+				if ("endpoints" in options && options.endpoints != undefined) {
+					canAccess = options.endpoints[payload.lvl].includes(resource);
+				}
+			}
+			if (!canAccess && "urls" in payload && Array.isArray(payload.urls)) {
+				canAccess = payload.urls.includes(resource);
+			}
+			return canAccess;
+		} else {
+			return false;
+		}
+	} catch (err) {
+		if (err instanceof JWT.JsonWebTokenError) {
+			let extraInfo;
+			if (err instanceof JWT.TokenExpiredError) {
+				let payload;
+				const payloadSection: null | JWT.JwtPayload | string = JWT.decode(jwt, options);
+				if (payloadSection != null) {
+					if (typeof payloadSection === "string") {
+						payload = JSON.parse(payloadSection);
+					} else {
+						payload = payloadSection;
+					}
+					if ("lvl" in payload) {
+						await queryDB(db, "DELETE FROM jwt WHERE jti = ?;", [payload.jti]);
+					}
+				}
+				return false;
+			} else if (err instanceof JWT.NotBeforeError) {
+				extraInfo = ". Date: " + err.date;
+			}
+			console.log(err.name + ": " + err.message + (extraInfo != undefined ? extraInfo : ""));
+			return false;
+		} else {
+			throw err;
+			return false;
+		}
+	}
 }
 
-function createJWT(payload: JWTAuthPayload | string | Buffer): string {
-    const token = jwt.sign(payload, process.env.JWT_Key);
-    return token;
+function createJWT(payload: JWT.JwtPayload, options?: JWT.SignOptions): string {
+	const JWTKey = process.env.JWT_KEY;
+	const token = JWT.sign(payload, JWTKey, options);
+	return token;
 }
 
-export async function register(req: express.Request, res: express.Response) {
+async function createAuthJWT(lvl: string, urls?: string[]): Promise<string> {
+	const jti = nanoid();
+	let payload: JWTAuthPayload = {lvl: lvl};
+	if (Array.isArray(urls)) {
+		payload.urls = urls;
+	}
+	const jwt = createJWT(payload, {jwtid: jti, expiresIn: "3h", mutatePayload: true});
+	if (payload.iat == undefined) {
+		throw new TypeError("Error: JWT iat not set in payload");
+	}
+	await queryDB(db, "INSERT INTO jwt (jti, last_used) VALUES (?, ?);", [jti, payload.iat.toString()]);
+	const numJWTs = (await queryDB(db, "SELECT * FROM jwt WHERE jti = ?;", [jti])).length;
+	if (numJWTs === 1) {
+		return jwt;
+	}
+	throw new Error("NanoID Collision Found");
 }
 
-export function createAuthMiddleware(nonAuthorisedEndpoints: string[]) {
-	return function(req: express.Request, res: express.Response, next: express.NextFunction) {
-		if (nonAuthorisedEndpoints.includes(req.path)) {
+export function createRegisterRoute(cookieOptions: express.CookieOptions) {
+	return async function register(req: express.Request, res: express.Response) {
+		const username = req.body.username;
+		const password = req.body.password;
+		const permsLevel = req.body.permsLevel || "basic";
+		const urls = Array.isArray(req.body.urls) ? req.body.urls : null;
+		let validated = true;
+		let status = "Failed";
+		// validate
+		if (validated) {
+			if ((await isUniqueUsername(username)) == 0) {
+				const sqlStatus = await createUser(username, password, permsLevel);
+				status = sqlStatus[0] ? "Successful Creation of User" : "Failed";
+			}
+		}
+		res.json({"status": status});
+		res.cookie(process.env.COOKIE_NAME, createAuthJWT(permsLevel, urls), cookieOptions);
+	}
+}
+
+export function createCheckAuthMiddleware(endpoints: RequiredEndpointAuth) {
+	return async function(req: express.Request, res: express.Response, next: express.NextFunction) {
+		const jwt: string | boolean = req.signedCookies[process.env.COOKIE_NAME];
+		if (endpoints.none.includes(req.path)) {
 			next();
-		} else if (checkAccess(jwt, req.path)) {
+		} else if (await checkAccess(jwt, req.path, {"endpoints": endpoints})) {
 			next()
 		} else {
 			next("route");
 		}
 	}
 }
+
+export default { createAuthRoute, createCheckAuthMiddleware, createRegisterRoute };

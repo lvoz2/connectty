@@ -1,11 +1,1 @@
-function update(req, res) {
-  res.send("Update");
-}
-function input(req, res) {
-  res.send("Input");
-}
-var sshProxy = {
-  "update": update,
-  "input": input
-};
-export default sshProxy;
+function update(a,b){b.send("Update")}function input(a,b){b.send("Input")}var sshProxy={update:update,input:input};export default sshProxy;

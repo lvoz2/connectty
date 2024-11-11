@@ -144,7 +144,7 @@ export function createAuthRoute(cookieOptions: express.CookieOptions) {
 	}
 }
 
-async function checkAccess(jwt: string, resource: string, options?: JWT.VerifyOptions & { endpoints?: RequiredEndpointAuth }): Promise<boolean> {
+async function checkAccess(jwt: string, resource: string, timeout: number, options?: JWT.VerifyOptions & { endpoints?: RequiredEndpointAuth }): Promise<boolean> {
 	const JWTKey = process.env.JWT_KEY;
 	try {
 		const isJWT = validator.isJWT(jwt);
@@ -172,6 +172,13 @@ async function checkAccess(jwt: string, resource: string, options?: JWT.VerifyOp
 			}
 			if (!canAccess && "urls" in payload && Array.isArray(payload.urls)) {
 				canAccess = validateURLArray(payload.urls) && payload.urls.includes(resource);
+			}
+			if (canAccess === true) {
+				const dbEntry = await queryDB(db, "SELECT jti, last_used FROM jwt WHERE jti = ?", [payload.jti]);
+				const xMinsAgo = Math.floor(Date.now() / 1000) - (timeout * 60);
+				if ((dbEntry.length !== 1) || (dbEntry.length == 1 && dbEntry[0]["last_used"] <= xMinsAgo)) {
+					canAccess = false;
+				}
 			}
 			return canAccess;
 		} else {
@@ -263,12 +270,20 @@ export function createRegisterRoute(cookieOptions: express.CookieOptions) {
 	}
 }
 
-export function createCheckAuthMiddleware(endpoints: RequiredEndpointAuth) {
+export function createRemoveStaleJWTsMiddleware(timeout: number) {
+	return function (req: express.Request, res: express.Response, next: express.NextFunction) {
+		const xMinsAgo = Math.floor(Date.now() / 1000) - (timeout * 60);
+		queryDB(db, "DELETE FROM jwt WHERE last_used < ?;", [xMinsAgo.toString()])
+		next()
+	}
+}
+
+export function createCheckAuthMiddleware(endpoints: RequiredEndpointAuth, timeout: number) {
 	return async function(req: express.Request, res: express.Response, next: express.NextFunction) {
 		const jwt: string | false = req.signedCookies[process.env.COOKIE_NAME];
 		if (endpoints.none.includes(req.path)) {
 			next();
-		} else if (jwt !== false && await checkAccess(jwt, req.path, {"endpoints": endpoints})) {
+		} else if (jwt !== false && await checkAccess(jwt, req.path, timeout, {"endpoints": endpoints})) {
 			next()
 		} else {
 			next("route");
@@ -276,4 +291,4 @@ export function createCheckAuthMiddleware(endpoints: RequiredEndpointAuth) {
 	}
 }
 
-export default { createAuthRoute, createCheckAuthMiddleware, createRegisterRoute };
+export default { createAuthRoute, createCheckAuthMiddleware, createRegisterRoute, createRemoveStaleJWTsMiddleware };

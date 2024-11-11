@@ -49,6 +49,7 @@
     "@types/ssh2": "^1.15.1",
     "@types/toobusy-js": "^0.5.4",
     "@types/validator": "^13.12.2",
+    "babel-preset-minify": "^0.5.2",
     "pkgroll": "^2.5.1",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"

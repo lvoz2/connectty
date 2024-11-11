@@ -20,9 +20,12 @@ const cookieOptions: express.CookieOptions = {
 	secure: true,
 	signed: true
 };
+const timeout = 15;
+const checkAuth = auth.createCheckAuthMiddleware(endpoints, timeout);
 
 app.set("trust proxy", 1)
 
+app.use(auth.createRemoveStaleJWTsMiddleware(timeout));
 app.use(express.static("static"));
 app.use(express.json());
 app.use(cookieParser(process.env.COOKIE_KEY));
@@ -42,31 +45,31 @@ app.use(function(req: express.Request, res: express.Response, next) {
 	}
 });
 
-app.post("/echo", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
+app.post("/echo", checkAuth, (req: express.Request, res: express.Response) => {
 	res.json(req.body);
 });
 
-app.get("/hello", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
+app.get("/hello", checkAuth, (req: express.Request, res: express.Response) => {
 	res.send("Hello World")
 });
 
-app.post("/auth", auth.createCheckAuthMiddleware(endpoints), auth.createAuthRoute(cookieOptions));
+app.post("/auth", checkAuth, auth.createAuthRoute(cookieOptions));
 
-app.post("/register", auth.createCheckAuthMiddleware(endpoints), auth.createRegisterRoute(cookieOptions));
+app.post("/register", checkAuth, auth.createRegisterRoute(cookieOptions));
 
-app.get("/test-auth-status", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
+app.get("/test-auth-status", checkAuth, (req: express.Request, res: express.Response) => {
 	res.json({"status":"Success"});
 });
 
-app.post("/captcha", auth.createCheckAuthMiddleware(endpoints), (req: express.Request, res: express.Response) => {
+app.post("/captcha", checkAuth, (req: express.Request, res: express.Response) => {
 	const secret_key = process.env.CAPTCHA_SECRET_KEY;
 	const token = req.body.token;
 	const url = "https://www.google.com/recaptcha/api/siteverify?secret=" + secret_key + "&response=" + token;
 	fetch(url, {method: 'post'}).then(response => response.json()).then(google_response => res.json({ google_response })).catch(error => res.json({ error }));
 });
 
-app.get("/ssh/update", auth.createCheckAuthMiddleware(endpoints), sshProxy.update);
-app.get("/ssh/input", auth.createCheckAuthMiddleware(endpoints), sshProxy.input);
+app.get("/ssh/update", checkAuth, sshProxy.update);
+app.get("/ssh/input", checkAuth, sshProxy.input);
 
 app.use(function(req: express.Request, res: express.Response, next) {
 	res.status(404);

@@ -15,7 +15,7 @@ export const jwtBuilder = new JWT.JWT(Buffer.from(process.env.JWT_KEY, "hex"));
 export function urlMatchArray(urlArray, path) {
 	let matched = false;
 	for (const url of urlArray) {
-		matched = matchPattern(url, path);
+		matched = (matchPattern(url, path) != undefined);
 		if (matched) {
 			break;
 		}
@@ -86,9 +86,6 @@ export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
 				strForm = strForm + (cookieOpts.secure ? "; Secure" : "");
 				break;
 			default:
-				console.log(optsKeys);
-				console.log(opt);
-				console.log(i);
 				throw new Error("Invalid Cookie Header");
 		}
 	}

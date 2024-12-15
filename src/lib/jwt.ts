@@ -13,7 +13,6 @@ export interface JWKLong {
 	keyOperations?: string[],
 	keyID?: string,
 	modulus?: string,
-	otherPrimesInfo?: object[],
 	firstPrimeFactor?: string,
 	secondPrimeFactor?: string,
 	firstCRTCoefficient?: string,
@@ -64,7 +63,7 @@ export class JWT {
 		this.key = key;
 	}
 
-	#convertToShort(payload: JWTPayloadLong): jose.JWTPayload {
+	#shortPayload(payload: JWTPayloadLong): jose.JWTPayload {
 		const keys = Object.keys(payload);
 		let shortened: jose.JWTPayload = {}
 		for (let key in keys) {
@@ -84,13 +83,182 @@ export class JWT {
 				case "jwtID":
 					shortened.jti = payload.jwtID;
 					break;
+				default:
+					shortened[key] = payload[key];
+			}
+		}
+		return shortened;
+	}
+
+	#shortJSONWebKey(JSONWebKey: JWKLong): jose.JWK {
+		const keys = Object.keys(JSONWebKey);
+		let shortened: jose.JWTHeaderParameters = {}
+		for (let key in keys) {
+			switch (key) {
+				case "keyType":
+					shortened.kty = JSONWebKey[key];
+					break;
+				case "algorithm":
+					shortened.alg = JSONWebKey[key];
+					break;
+				case "curve":
+					shortened.crv = JSONWebKey[key];
+					break;
+				case "privateExponent":
+					shortened.d = JSONWebKey[key];
+					break;
+				case "firstFactorCRTExponent":
+					shortened.dp = JSONWebKey[key];
+					break;
+				case "secondFactorCRTExponent":
+					shortened.dq = JSONWebKey[key];
+					break;
+				case "exponent":
+					shortened.e = JSONWebKey[key];
+					break;
+				case "extractable":
+					shortened.ext = JSONWebKey[key];
+					break;
+				case "keyValue":
+					shortened.k = JSONWebKey[key];
+					break;
+				case "keyOperations":
+					shortened.key_ops = JSONWebKey[key];
+					break;
+				case "keyID":
+					shortened.kid = JSONWebKey[key];
+					break;
+				case "modulus":
+					shortened.n = JSONWebKey[key];
+					break;
+				case "firstPrimeFactor":
+					shortened.p = JSONWebKey[key];
+					break;
+				case "secondPrimeFactor":
+					shortened.q = JSONWebKey[key];
+					break;
+				case "firstCRTCoefficient":
+					shortened.qi = JSONWebKey[key];
+					break;
+				case "publicKeyUse":
+					shortened.use = JSONWebKey[key];
+					break;
+				case "xCoordinate":
+					shortened.x = JSONWebKey[key];
+					break;
+				case "x509CertificateChain":
+					shortened.x5c = JSONWebKey[key];
+					break;
+				case "x509CertificateSHA1Thumbprint":
+					shortened.x5t = JSONWebKey[key];
+					break;
+				case "x509CertificateSHA256Thumbprint":
+					shortened["x52#S256"] = JSONWebKey[key];
+					break;
+				case "x509Url":
+					shortened.x5u = JSONWebKey[key];
+					break;
+				case "yCoordinate":
+					shortened.y = JSONWebKey[key];
+					break;
+			}
+		}
+	}
+
+	#shortProtectedHeader(protectedHeader: JWTProtectedHeadersLong): jose.JWTHeaderParameters {
+		let shortened: jose.JWTHeaderParameters = {}
+		for (let key in protectedHeader) {
+			switch (key) {
+				case "algorithm":
+					shortened.alg = protectedHeader[key];
+					break;
+				case "useBase64UrlEncoding":
+					shortened.b64 = protectedHeader[key];
+					break;
+				case "critical":
+					shortened.crit = protectedHeader[key];
+					break;
+				case "contentType":
+					shortened.cty = protectedHeader[key];
+					break;
+				case "JWKSetUrl":
+					shortened.jku = protectedHeader[key];
+					break;
+				case "JSONWebKey":
+					shortened.jwk = this.#shortJSONWebKey(protectedHeader[key]);
+					break;
+				case "keyID":
+					shortened.kid = protectedHeader[key];
+					break;
+				case "type":
+					shortened.typ = protectedHeader[key];
+					break;
+				case "x509CertificateChain":
+					shortened.x5c = protectedHeader[key];
+					break;
+				case "x509CertificateSHA1Thumbprint":
+					shortened.x5t = protectedHeader[key];
+					break;
+				case "x509Url":
+					shortened.x5u = protectedHeader[key];
+					break;
 			}
 		}
 		return shortened;
 	}
 
 	async sign(payload: JWTPayloadLong, options?: JWTSignOptions): Promise<string> {
-		
+		const jwt = await new jose.SignJWT(payload);
+		if (options != undefined) {
+			for (let key in options) {
+				switch (key) {
+					case "audience":
+						jwt.setAudience(options[key]);
+						break;
+					case "expirationTime":
+						jwt.setExpirationTime(options[key]);
+						break;
+					case "issuedAt":
+						jwt.setIssuedAt(options[key]);
+						break;
+					case "issuer":
+						jwt.setIssuer(options[key]);
+						break;
+					case "jwtID":
+						jwt.setJti(options[key]);
+						break;
+					case "notBefore":
+						jwt.setNotBefore(options[key]);
+						break;
+					case "protectedHeader":
+						jwt.setProtectedHeader(this.#shortProtectedHeader(options[key]));
+						break;
+					case "subject":
+						jwt.setSubject(options[key]);
+						break;
+				}
+			}
+		}
+		try {
+			const jwtString = await jwt.sign(this.key);
+			return jwtString;
+		} catch (err) {
+			if (err instanceof jose.errors.JWSInvalid) {
+				const msg = err.toString();
+				if (msg === "JWSInvalid: either setProtectedHeader or setUnprotectedHeader must be called before #sign()") {
+					const alg = "HS256";
+					jwt.setProtectedHeader({ alg });
+					const jwtString = await jwt.sign(this.key);
+					return jwtString;
+				} else {
+					throw err;
+					return "";
+				}
+			} else {
+				throw err;
+				return "";
+			}
+		}
 	}
 
 	async verify(jwt: string | Uint8Array, options?: JWTVerifyOptions): Promise<{"payload": undefined, "protectedHeader": undefined} | jose.JWTVerifyResult> {

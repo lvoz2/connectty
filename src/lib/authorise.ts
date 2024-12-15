@@ -40,13 +40,17 @@ class Authorise {
 		if (typeof expiresIn !== "string") {
 			options = expiresIn;
 		}
+		if (jwt.toString().length == 0) {
+			return false;
+		}
 		try {
-			const isJWT = validator.isJWT(jwt);
+			const isJWT = validator.isJWT(jwt.toString());
 			if (!isJWT) {
+				console.log("not JWT like");
 				return false;
 			}
 		} catch (err) {
-			console.log(err);
+			console.log("Error thing:", err);
 			return false;
 		}
 		if (!options.hasOwnProperty("maxTokenAge")) {
@@ -55,6 +59,7 @@ class Authorise {
 		try {
 			const { payload, protectedHeader } = await this.jwtBuilder.verify(jwt, options);
 			if (!(payload != undefined)) {
+				console.log("payload is undefined after trying to verify jwt");
 				return false;
 			}
 			if ("lvl" in payload) {
@@ -69,21 +74,30 @@ class Authorise {
 				}
 				return canAccess;
 			} else {
+				console.log("lvl was not in payload, so not right shape jwt");
 				return false;
 			}
 		} catch (err) {
 			throw err;
+			console.log("err");
 			return false;
 		}
 	}
 
 	async checkAuth(path: string, JWTCookie: string) {
-		if (urlMatchArray(this.endpointSchema.none, path)) {
+		JWTCookie = JWTCookie == undefined ? "" : JWTCookie.toString();
+		let matched = false;
+		for (let key in this.endpointSchema) {
+			if (key != "none" && !matched) {
+				matched = urlMatchArray(this.endpointSchema[key], path);
+			}
+		}
+		const accessCheck = !matched ? undefined : await this.#checkAccess(JWTCookie, path, {"endpoints": this.endpointSchema});
+		if (!matched) {
 			return true;
-		} else if (JWTCookie !== "" && await this.#checkAccess(JWTCookie, path, {"endpoints": this.endpointSchema})) {
+		} else if (JWTCookie !== "" && accessCheck) {
 			return true;
 		} else {
-			//console.log(JWTCookie.length);
 			return false;
 		}
 	}

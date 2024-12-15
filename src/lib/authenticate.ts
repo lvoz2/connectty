@@ -118,10 +118,7 @@ class Authenticate {
 		if (Array.isArray(urls)) {
 			payload.urls = urls;
 		}
-		const jwt = this.jwtBuilder.sign(payload, {jwtid: jti, expiresIn: "10m", mutatePayload: true});
-		if (payload.iat == undefined) {
-			throw new TypeError("Error: JWT iat not set in payload");
-		}
+		const jwt = await this.jwtBuilder.sign(payload, {jwtID: jti, expirationTime: "10 mins"});
 		return jwt;
 	}
 
@@ -140,7 +137,7 @@ class Authenticate {
 			if (correct[0]) {
 				status.msg = "Success";
 				status.status = true;
-				permsLevel = status[status.length - 1];
+				permsLevel = correct[correct.length - 1];
 			}
 		}
 		const jwt = await this.#createAuthJWT(expiresIn, permsLevel);

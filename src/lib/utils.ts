@@ -7,7 +7,7 @@ import { Buffer } from "node:buffer";
 // Set to something vercel/ms can understand
 export const timeout = "10m";
 export const endpoints = {
-	"none": ["/", "/login", "/api/captcha", "/api/auth", "/_next/static/**/*.*"],
+	"none": ["/", "/login", "/api/auth", "/_next/static/**/*.*"],
 	"full": ["/api/test-auth-status"]
 };
 export const jwtBuilder = new JWT.JWT(Buffer.from(process.env.JWT_KEY, "hex"));

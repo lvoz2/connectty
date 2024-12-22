@@ -99,6 +99,11 @@ class Authenticate {
 						permsLevel = result[0]["max_perms"];
 						uid = result[0]["id"];
 					}
+				} else {
+					// TEST_HASH is an argon2 hash used to ensure the timing of authentication is constant-ish,
+					// to mitigate a side-channel attack that leaks valid usernames. See the comment before
+					// this.authenticate() for more info
+					await argon2.verify(process.env.TEST_HASH, password);
 				}
 			}
 		} catch (err) {
@@ -112,17 +117,26 @@ class Authenticate {
 		return [status, permsLevel];
 	}
 
-	async #createAuthJWT(expiresIn: string = "10m", lvl: string, urls?: string[]): Promise<string> {
+	async #createAuthJWT(expiresIn: string = "10 mins", lvl: string, urls?: string[]): Promise<string> {
 		const jti = nanoid();
 		let payload: JWTAuthPayload = {lvl: lvl};
 		if (Array.isArray(urls)) {
 			payload.urls = urls;
 		}
-		const jwt = await this.jwtBuilder.sign(payload, {jwtID: jti, expirationTime: "10 mins"});
+		const jwt = await this.jwtBuilder.sign(payload, {jwtID: jti, expirationTime: expiresIn});
 		return jwt;
 	}
 
-	async authenticate(username: string, password: string, expiresIn: string = "10m") {
+	/*
+	* This function has a side channel attack that leaks valid usernames
+	* It uses timings of the responses, which are 3-7x longer if the
+	* username does exist compared to it not existing.
+	* User exists: 600-700ms, User does not exist: 100-200ms
+	* The mitigation will be to go through all the authentication steps,
+	* with fake details, and set response to always fail when using fake
+	* data.
+	*/
+	async authenticate(username: string, password: string, expiresIn: string = "10 mins") {
 		let status = {status: false, msg: "Failed"};
 		let validated = true;
 		let correct;
@@ -131,6 +145,9 @@ class Authenticate {
 			const unique = (await this.#isUniqueUsername(username));
 			if (unique == 1) {
 				correct = await this.#validateCredentials(username, password);
+			} else {
+				await this.#validateCredentials(username, password);
+				correct = false;
 			}
 		}
 		if (correct) {

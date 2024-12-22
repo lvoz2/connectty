@@ -1,44 +1,18 @@
 "use client";
 
-export default function Page() {
-	function login(e) {
-		e.preventDefault();
-		grecaptcha.ready(function() {
-			grecaptcha.execute("6LdHimkqAAAAAOXLRndbYvcmN3dzYjvLz7-5QBAD", {action: "submit"}).then((token) => {	
-				const username = document.querySelector("#username").value;
-				const password = document.querySelector("#password").value;
-				let data = {"token": token, "username": username, "password": password};
-				fetch('/api/auth', {
-					headers: {
-						"Accept": "application/json",
-						"Content-Type": "application/json"
-					},
-					method: "post",
-					body: JSON.stringify(data)
-				}).then(response => response.json()).then((json) => {
-					if (json.status == "Success") {
-						//window.location = "https://lvoz2.duckdns.org";
-					}
-				}).catch(error => console.log(error));
-			});
-		});
-	}
+import { CredentialLogin } from "@/components/credLogin.tsx";
+import { PasskeyLogin } from "@/components/passkeyLogin.tsx";
 
-	function handleClick(e) {
-		login(e);
-	}
+export default function Page() {
+	// Style from https://uiverse.io/Dhananjoy43/pretty-earwig-32
 
 	return (
-		<div id="container">
-			<div className="row">
-				<input id="username" type="text" placeholder="Username"></input>
-			</div>
-			<div className="row">
-				<input id="password" type="password" placeholder="Password"></input>
-			</div>
-			<div className="row">
-				<button id="login" onClick={handleClick}>Login</button>
-				<input type="checkbox" disabled id="captcha-status"></input>
+		<div className="flex flex-row min-h-screen w-screen justify-center items-center">
+			<div id="loginCard" className="card px-8 py-6 rounded-lg bg-gray-800 w-72">
+				<h1 className="text-center font-bold text-3xl text-white">Login</h1>
+				<CredentialLogin />
+				<p className="overflow-hidden text-center text-white my-3 before:bg-white before:inline-block before:h-px before:relative before:align-middle before:[width:50%] before:right-2 before:[margin-left:-50%] after:bg-white after:inline-block after:h-px after:relative after:align-middle after:[width:50%] after:left-2 after:[margin-right:-50%]">or</p>
+				<PasskeyLogin />
 			</div>
 		</div>
 	);

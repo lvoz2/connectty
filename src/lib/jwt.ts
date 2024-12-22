@@ -285,6 +285,8 @@ export class JWT {
 		} catch (err) {
 			if (err instanceof jose.errors.JWSSignatureVerificationFailed) {
 				return {"payload": undefined, "protectedHeader": undefined};
+			} else if (err instanceof jose.errors.JWTExpired) {
+				return {"payload": undefined, "protectedHeader": undefined};
 			} else {
 				throw err;
 				return {"payload": undefined, "protectedHeader": undefined};

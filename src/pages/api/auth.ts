@@ -7,8 +7,8 @@ const authService = authenticate(utils.endpoints, utils.timeout, utils.cookieOpt
 "use server";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-	if (authService) {
-		if (req.method === "POST") {
+	if (req.method === "POST") {
+		if (authService) {
 			const token = req.body.token;
 			const secret_key = process.env.CAPTCHA_SECRET_KEY;
 			const url = "https://www.google.com/recaptcha/api/siteverify?secret=" + secret_key + "&response=" + token;

@@ -4,13 +4,18 @@ import JWT from "@/lib/jwt.ts";
 import { Buffer } from "node:buffer";
 
 // JWT Timeout
-// Set to something vercel/ms can understand
-export const timeout = "10m";
+// Set to something jose can understand
+export const timeout = "10 mins";
 export const endpoints = {
-	"none": ["/", "/login", "/api/auth", "/_next/static/**/*.*"],
-	"full": ["/api/test-auth-status"]
+	"none": ["/login", "/api/auth", "/api/passkey/login/*", "/_next/static/**/*.*"],
+	"full": ["/api/test-auth-status", "/api/register", "/api/passkey/register/*"] /**/
 };
 export const jwtBuilder = new JWT.JWT(Buffer.from(process.env.JWT_KEY, "hex"));
+export const passkeyRp = {
+	name: "lv_oz2's Website",
+	id: "lvoz2.duckdns.org",
+	origin: "https://lvoz2.duckdns.org"
+};
 
 export function urlMatchArray(urlArray, path) {
 	let matched = false;
@@ -109,4 +114,4 @@ export function cookieOptions(name: string, value: string, overrides: CookieSeri
 	return options;
 };
 
-export default { endpoints, timeout, cookieOptions, cookieOptsToString, urlMatchArray, jwtBuilder };
+export default { timeout, endpoints, jwtBuilder, passkeyRp, urlMatchArray, validateURLArray, cookieOptions, cookieOptsToString };

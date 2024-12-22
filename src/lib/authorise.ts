@@ -63,6 +63,9 @@ class Authorise {
 				return false;
 			}
 			if ("lvl" in payload) {
+				if (payload.lvl === "full") {
+					return true;
+				}
 				let canAccess = false;
 				if (options) {
 					if ("endpoints" in options && options.endpoints != undefined) {
@@ -85,6 +88,9 @@ class Authorise {
 	}
 
 	async checkAuth(path: string, JWTCookie: string) {
+		if (path === "/") {
+			return true;
+		}
 		JWTCookie = JWTCookie == undefined ? "" : JWTCookie.toString();
 		let matched = false;
 		for (let key in this.endpointSchema) {
@@ -92,8 +98,12 @@ class Authorise {
 				matched = urlMatchArray(this.endpointSchema[key], path);
 			}
 		}
-		const accessCheck = !matched ? undefined : await this.#checkAccess(JWTCookie, path, {"endpoints": this.endpointSchema});
+		let noneMatched = false;
 		if (!matched) {
+			noneMatched = urlMatchArray(this.endpointSchema.none, path);
+		}
+		const accessCheck = noneMatched ? undefined : await this.#checkAccess(JWTCookie, path, {"endpoints": this.endpointSchema});
+		if (noneMatched) {
 			return true;
 		} else if (JWTCookie !== "" && accessCheck) {
 			return true;

@@ -1,4 +1,5 @@
 import * as jose from "jose";
+import validator from "validator";
 
 export interface JWKLong {
 	keyType: string,
@@ -56,6 +57,42 @@ interface JWTSignOptions extends JWTPayloadLong {
 interface JWTVerifyOptions extends jose.JWTVerifyOptions {
 	critical?: object,
 	type?: string
+}
+
+export function betterIsJWT(jwt: string) {
+	if (validator.isJWT(jwt)) {
+		const parts = jwt.split(".");
+		let decoded;
+		try {
+			decoded = [atob(parts[0]), atob(parts[1])];
+		} catch (err) {
+			if (err instanceof DOMException) {
+				// Checks if the error is becuase of invalid characters
+				if (err.code == 5) {
+					return false;
+				} else {
+					throw err;
+					return false;
+				}
+			} else {
+				throw err;
+				return false;
+			}
+		}
+		try {
+			JSON.parse(decoded[0]);
+			JSON.parse(decoded[1]);
+			return true;
+		} catch (err) {
+			if (err instanceof SyntaxError) {
+				return false;
+			} else {
+				throw err;
+				return false;
+			}
+		}
+	}
+	return false;
 }
 
 export class JWT {
@@ -262,6 +299,10 @@ export class JWT {
 	}
 
 	async verify(jwt: string | Uint8Array, options?: JWTVerifyOptions): Promise<{"payload": undefined, "protectedHeader": undefined} | jose.JWTVerifyResult> {
+		/*if (!betterIsJWT(jwt.toString())) {
+			throw new Error("First argument must look like a valid JWT");
+			return {payload: undefined, protectedHeader: undefined};
+		}*/
 		let shortOptions = undefined;
 		if (options != undefined) {
 			shortOptions = {};
@@ -295,4 +336,4 @@ export class JWT {
 	}
 }
 
-export default { JWT };
+export default { JWT, betterIsJWT };

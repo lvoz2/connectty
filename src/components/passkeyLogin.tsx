@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { startAuthentication } from '@simplewebauthn/browser';
+import { startAuthentication } from "@simplewebauthn/browser";
 
 export function PasskeyLogin() {
 	let usernameRef = useRef(null);
@@ -9,13 +9,46 @@ export function PasskeyLogin() {
 	async function passkeyLogin(e) {
 		e.preventDefault();
 		const username = usernameRef.current.value;
-		const jwt = (await fetch("/api/passkey/login/start", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({username: username})}).then(res => res.json())).jwt;
-		console.log(jwt);
-		const assertion = await startAuthentication(options);
-		const verifyResponse = await fetch("/api/passkey/login/finish", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(assertion)});
-		if (verifyResponse.ok) {
-			console.log("Login success");
-			window.location = "https://lvoz2.duckdns.org";
+		// Get the options for passkey login, as a jwt
+		const jwt = (await fetch("/api/passkey/login/start", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				username: username
+			})
+		}).then(res => res.json())).jwt;
+		// Get and decode the body section of the jwt
+		const jwtBody = JSON.parse(atob(jwt.split(".")[1]))
+		// Clean up the body
+		delete jwtBody.exp;
+		delete jwtBody.iat;
+		delete jwtBody.jti;
+		// Check if a passkey has been created yet
+		if (jwtBody.hasOwnProperty("allowCredentials")) {
+			if (jwtBody.allowCredentials.length >= 1) {
+				const assertion = await startAuthentication({optionsJSON: jwtBody});
+				const verifyResponse = await fetch("/api/passkey/login/finish", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						options: assertion,
+						jwt: jwt,
+						username: username
+					})
+				}).then(res => res.json());
+				if (verifyResponse.success) {
+					console.log("Login success");
+					window.location = "https://lvoz2.duckdns.org";
+				} else {
+					console.log("Login failure");
+				}
+			} else {
+				console.log("Login failure");
+			}
 		} else {
 			console.log("Login failure");
 		}

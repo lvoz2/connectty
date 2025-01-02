@@ -1,7 +1,6 @@
 import JWT from "@/lib/jwt.ts";
 import ms from "ms";
-import { cookieOptions, validateURLArray, urlMatchArray, jwtBuilder } from "@/lib/utils.ts";
-import validator from "validator";
+import { cookieOptions, validateURLArray, urlMatchArray, jwtBuilder, betterIsJWT } from "@/lib/utils.ts";
 
 "use server";
 
@@ -44,7 +43,7 @@ class Authorise {
 			return false;
 		}
 		try {
-			const isJWT = validator.isJWT(jwt.toString());
+			const isJWT = betterIsJWT(jwt.toString());
 			if (!isJWT) {
 				console.log("not JWT like");
 				return false;
@@ -59,7 +58,7 @@ class Authorise {
 		try {
 			const { payload, protectedHeader } = await this.jwtBuilder.verify(jwt, options);
 			if (!(payload != undefined)) {
-				console.log("payload is undefined after trying to verify jwt");
+				//console.log("payload is undefined after trying to verify jwt");
 				return false;
 			}
 			if ("lvl" in payload) {

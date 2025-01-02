@@ -8,6 +8,7 @@ import { getDB, queryDB } from "@/lib/db.ts";
 "use server";
 
 interface JWTAuthPayload extends JWT.JWTPayloadLong {
+	usr: string,
 	lvl: string,
 	urls?: string[],
 }
@@ -117,9 +118,9 @@ class Authenticate {
 		return [status, permsLevel];
 	}
 
-	async #createAuthJWT(expiresIn: string = "10 mins", lvl: string, urls?: string[]): Promise<string> {
+	async #createAuthJWT(username: string, expiresIn: string = "10 mins", lvl: string, urls?: string[]): Promise<string> {
 		const jti = nanoid();
-		let payload: JWTAuthPayload = {lvl: lvl};
+		let payload: JWTAuthPayload = {usr: username, lvl: lvl};
 		if (Array.isArray(urls)) {
 			payload.urls = urls;
 		}
@@ -136,7 +137,7 @@ class Authenticate {
 	* with fake details, and set response to always fail when using fake
 	* data.
 	*/
-	async authenticate(username: string, password: string, expiresIn: string = "10 mins") {
+	async authenticatePassword(username: string, password: string, expiresIn: string = "10 mins") {
 		let status = {status: false, msg: "Failed"};
 		let validated = true;
 		let correct;
@@ -157,12 +158,21 @@ class Authenticate {
 				permsLevel = correct[correct.length - 1];
 			}
 		}
-		const jwt = await this.#createAuthJWT(expiresIn, permsLevel);
+		const jwt = await this.#createAuthJWT(username, expiresIn, permsLevel);
 		const options = cookieOptions(process.env.COOKIE_NAME, jwt, this.cookieOptions);
 		return {
 			status: status,
 			cookieOptions: options
 		};
+	}
+
+	// Only call this after passkey authorisation has succeeded
+	async authenticatePasskey(username: string, expiresIn: string = "10 mins") {
+		const queryResult = await queryDB(getDB(), "SELECT username, max_perms FROM users WHERE username = ?;", [username]);
+		const permsLevel = queryResult[0].max_perms;
+		const jwt = await this.#createAuthJWT(username, expiresIn, permsLevel);
+		const options = cookieOptions(process.env.COOKIE_NAME, jwt, this.cookieOptions);
+		return options;
 	}
 
 	async register(expiresIn: string = "10m", username: string, password: string, permsLevel: string = "basic", urls?: string[]) {

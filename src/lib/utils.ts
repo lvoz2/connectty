@@ -28,6 +28,11 @@ export function urlMatchArray(urlArray, path) {
 	return matched;
 }
 
+// Alias to src/lib/jwt.ts betterIsJWT(jwt)
+export function betterIsJWT(jwt: string) {
+	return JWT.betterIsJWT(jwt);
+}
+
 export function validateURLArray(urls: string[]): boolean {
 	return urls.reduce((acc, e) => {
 		return acc && validator.isURL(e, {
@@ -114,4 +119,4 @@ export function cookieOptions(name: string, value: string, overrides: CookieSeri
 	return options;
 };
 
-export default { timeout, endpoints, jwtBuilder, passkeyRp, urlMatchArray, validateURLArray, cookieOptions, cookieOptsToString };
+export default { timeout, endpoints, jwtBuilder, passkeyRp, urlMatchArray, betterIsJWT, validateURLArray, cookieOptions, cookieOptsToString };

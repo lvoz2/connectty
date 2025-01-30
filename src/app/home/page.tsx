@@ -1,5 +1,3 @@
-"use client";
-
 import { PasskeyRegister } from "@/components/passkeyRegister.tsx";
 
 export default function Page() {

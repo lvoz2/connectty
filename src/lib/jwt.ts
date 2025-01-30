@@ -2,61 +2,69 @@ import * as jose from "jose";
 import validator from "validator";
 
 export interface JWKLong {
-	keyType: string,
-	algorithm?: string,
-	curve?: string,
-	privateExponent?: string,
-	firstFactorCRTExponent?: string,
-	secondFactorCRTExponent?: string,
-	exponent?: string,
-	extractable?: boolean,
-	keyValue?: string,
-	keyOperations?: string[],
-	keyID?: string,
-	modulus?: string,
-	firstPrimeFactor?: string,
-	secondPrimeFactor?: string,
-	firstCRTCoefficient?: string,
-	publicKeyUse?: string,
-	xCoordinate?: string,
-	x509CertificateChain?: string[],
-	x509CertificateSHA1Thumbprint?: string,
-	x509CertificateSHA256Thumbprint?: string,
-	x509Url?: string,
-	yCoordinate?: string
+	keyType: string;
+	algorithm?: string;
+	curve?: string;
+	privateExponent?: string;
+	firstFactorCRTExponent?: string;
+	secondFactorCRTExponent?: string;
+	exponent?: string;
+	extractable?: boolean;
+	keyValue?: string;
+	keyOperations?: string[];
+	keyID?: string;
+	modulus?: string;
+	firstPrimeFactor?: string;
+	secondPrimeFactor?: string;
+	firstCRTCoefficient?: string;
+	publicKeyUse?: string;
+	xCoordinate?: string;
+	x509CertificateChain?: string[];
+	x509CertificateSHA1Thumbprint?: string;
+	x509CertificateSHA256Thumbprint?: string;
+	x509Url?: string;
+	yCoordinate?: string;
 }
 
 interface JWTProtectedHeadersLong {
-	algorithm: string,
-	useBase64UrlEncoding?: boolean,
-	critical?: string[],
-	contentType?: string,
-	JWKSetUrl?: string,
-	JSONWebKey?: Pick<JWKLong, "xCoordinate" | "yCoordinate" | "keyType" | "curve" | "exponent" | "modulus">,
-	keyID?: string,
-	type?: string,
-	x509CertificateChain?: string[],
-	x509CertificateSHA1Thumbprint: string,
-	x509Url: string
+	algorithm: string;
+	useBase64UrlEncoding?: boolean;
+	critical?: string[];
+	contentType?: string;
+	JWKSetUrl?: string;
+	JSONWebKey?: Pick<
+		JWKLong,
+		| "xCoordinate"
+		| "yCoordinate"
+		| "keyType"
+		| "curve"
+		| "exponent"
+		| "modulus"
+	>;
+	keyID?: string;
+	type?: string;
+	x509CertificateChain?: string[];
+	x509CertificateSHA1Thumbprint: string;
+	x509Url: string;
 }
 
 interface JWTPayloadLong {
-	audience?: string | string[],
-	expirationTime?: number | Date | string,
-	issuedAt?: number | Date | string,
-	issuer?: string,
-	jwtID?: string,
-	notBefore?: number | Date | string,
-	subject?: string
+	audience?: string | string[];
+	expirationTime?: number | Date | string;
+	issuedAt?: number | Date | string;
+	issuer?: string;
+	jwtID?: string;
+	notBefore?: number | Date | string;
+	subject?: string;
 }
 
 interface JWTSignOptions extends JWTPayloadLong {
-	protectedHeaders?: JWTProtectedHeadersLong
+	protectedHeaders?: JWTProtectedHeadersLong;
 }
 
 interface JWTVerifyOptions extends jose.JWTVerifyOptions {
-	critical?: object,
-	type?: string
+	critical?: object;
+	type?: string;
 }
 
 export function betterIsJWT(jwt: string) {
@@ -102,7 +110,7 @@ export class JWT {
 
 	#shortPayload(payload: JWTPayloadLong): jose.JWTPayload {
 		const keys = Object.keys(payload);
-		let shortened: jose.JWTPayload = {}
+		let shortened: jose.JWTPayload = {};
 		for (let key in keys) {
 			switch (key) {
 				case "audience":
@@ -129,7 +137,7 @@ export class JWT {
 
 	#shortJSONWebKey(JSONWebKey: JWKLong): jose.JWK {
 		const keys = Object.keys(JSONWebKey);
-		let shortened: jose.JWTHeaderParameters = {}
+		let shortened: jose.JWTHeaderParameters = {};
 		for (let key in keys) {
 			switch (key) {
 				case "keyType":
@@ -202,8 +210,10 @@ export class JWT {
 		}
 	}
 
-	#shortProtectedHeader(protectedHeader: JWTProtectedHeadersLong): jose.JWTHeaderParameters {
-		let shortened: jose.JWTHeaderParameters = {}
+	#shortProtectedHeader(
+		protectedHeader: JWTProtectedHeadersLong
+	): jose.JWTHeaderParameters {
+		let shortened: jose.JWTHeaderParameters = {};
 		for (let key in protectedHeader) {
 			switch (key) {
 				case "algorithm":
@@ -244,7 +254,10 @@ export class JWT {
 		return shortened;
 	}
 
-	async sign(payload: JWTPayloadLong, options?: JWTSignOptions): Promise<string> {
+	async sign(
+		payload: JWTPayloadLong,
+		options?: JWTSignOptions
+	): Promise<string> {
 		const jwt = await new jose.SignJWT(payload);
 		if (options != undefined) {
 			for (let key in options) {
@@ -268,7 +281,9 @@ export class JWT {
 						jwt.setNotBefore(options[key]);
 						break;
 					case "protectedHeader":
-						jwt.setProtectedHeader(this.#shortProtectedHeader(options[key]));
+						jwt.setProtectedHeader(
+							this.#shortProtectedHeader(options[key])
+						);
 						break;
 					case "subject":
 						jwt.setSubject(options[key]);
@@ -282,7 +297,10 @@ export class JWT {
 		} catch (err) {
 			if (err instanceof jose.errors.JWSInvalid) {
 				const msg = err.toString();
-				if (msg === "JWSInvalid: either setProtectedHeader or setUnprotectedHeader must be called before #sign()") {
+				if (
+					msg ===
+					"JWSInvalid: either setProtectedHeader or setUnprotectedHeader must be called before #sign()"
+				) {
 					const alg = "HS256";
 					jwt.setProtectedHeader({ alg });
 					const jwtString = await jwt.sign(this.key);
@@ -298,7 +316,13 @@ export class JWT {
 		}
 	}
 
-	async verify(jwt: string | Uint8Array, options?: JWTVerifyOptions): Promise<{"payload": undefined, "protectedHeader": undefined} | jose.JWTVerifyResult> {
+	async verify(
+		jwt: string | Uint8Array,
+		options?: JWTVerifyOptions
+	): Promise<
+		| { payload: undefined; protectedHeader: undefined }
+		| jose.JWTVerifyResult
+	> {
 		/*if (!betterIsJWT(jwt.toString())) {
 			throw new Error("First argument must look like a valid JWT");
 			return {payload: undefined, protectedHeader: undefined};
@@ -310,10 +334,14 @@ export class JWT {
 			for (let key in keys) {
 				switch (key) {
 					case "critical":
-						shortOptions.crit = options.hasOwnProperty("crit") ? options.crit : options.critical;
+						shortOptions.crit = options.hasOwnProperty("crit")
+							? options.crit
+							: options.critical;
 						break;
 					case "type":
-						shortOptions.typ = options.hasOwnProperty("typ") ? options.typ : options.type;
+						shortOptions.typ = options.hasOwnProperty("typ")
+							? options.typ
+							: options.type;
 						break;
 					default:
 						shortOptions[key] = options[key];
@@ -325,12 +353,12 @@ export class JWT {
 			return result;
 		} catch (err) {
 			if (err instanceof jose.errors.JWSSignatureVerificationFailed) {
-				return {"payload": undefined, "protectedHeader": undefined};
+				return { payload: undefined, protectedHeader: undefined };
 			} else if (err instanceof jose.errors.JWTExpired) {
-				return {"payload": undefined, "protectedHeader": undefined};
+				return { payload: undefined, protectedHeader: undefined };
 			} else {
 				throw err;
-				return {"payload": undefined, "protectedHeader": undefined};
+				return { payload: undefined, protectedHeader: undefined };
 			}
 		}
 	}

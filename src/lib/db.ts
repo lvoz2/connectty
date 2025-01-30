@@ -1,9 +1,17 @@
 import sqlite3 from "sqlite3";
 import { open, Database, Statement } from "sqlite";
 
-const db = await open({filename: "./" + process.env.DB_NAME, driver: sqlite3.Database, mode: sqlite3.OPEN_READWRITE});
+const db = await open({
+	filename: "./" + process.env.DB_NAME,
+	driver: sqlite3.Database,
+	mode: sqlite3.OPEN_READWRITE,
+});
 
-export async function queryDB(db: Database, query: string, params: string[]): Promise<string[]> {
+export async function queryDB(
+	db: Database,
+	query: string,
+	params: string[]
+): Promise<string[]> {
 	if (db) {
 		const stmt: Statement = await db.prepare(query);
 		stmt.bind(params);

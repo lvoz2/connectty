@@ -1,8 +1,14 @@
 import JWT from "@/lib/jwt.ts";
 import ms from "ms";
-import { cookieOptions, validateURLArray, urlMatchArray, jwtBuilder, betterIsJWT } from "@/lib/utils.ts";
+import {
+	cookieOptions,
+	validateURLArray,
+	urlMatchArray,
+	jwtBuilder,
+	betterIsJWT,
+} from "@/lib/utils.ts";
 
-"use server";
+("use server");
 
 interface JWTAuthPayload extends JWT.JWTPayload {
 	lvl: string;
@@ -16,26 +22,45 @@ interface RequiredEndpointAuth {
 
 let instance: undefined | auth = undefined;
 
-export function authorise(endpointSchema: RequiredEndpointAuth = undefined, inactivityTimeout: number = undefined, cookieOptions: CookieSerializeOptions = undefined) {
+export function authorise(
+	endpointSchema: RequiredEndpointAuth = undefined,
+	inactivityTimeout: number = undefined,
+	cookieOptions: CookieSerializeOptions = undefined
+) {
 	if (instance != undefined) {
 		return instance;
 	}
-	if (cookieOptions != undefined && endpointSchema != undefined && inactivityTimeout != undefined) {
+	if (
+		cookieOptions != undefined &&
+		endpointSchema != undefined &&
+		inactivityTimeout != undefined
+	) {
 		return new Authorise(endpointSchema, inactivityTimeout, cookieOptions);
 	} else {
-		throw new TypeError("All arguments must be provided to instantiate a new class");
+		throw new TypeError(
+			"All arguments must be provided to instantiate a new class"
+		);
 	}
 }
 
 class Authorise {
-	constructor(endpointSchema: RequiredEndpointAuth, inactivityTimeout: number, cookieOptions: CookieSerializeOptions) {
+	constructor(
+		endpointSchema: RequiredEndpointAuth,
+		inactivityTimeout: number,
+		cookieOptions: CookieSerializeOptions
+	) {
 		this.cookieOptions = cookieOptions;
 		this.endpointSchema = endpointSchema;
 		this.inactivityTimeout = inactivityTimeout;
 		this.jwtBuilder = jwtBuilder;
 	}
 
-	async #checkAccess(jwt: string, resource: string, expiresIn?: string, options?: JWT.JWTVerifyOptions & { endpoints?: RequiredEndpointAuth }): Promise<boolean> {
+	async #checkAccess(
+		jwt: string,
+		resource: string,
+		expiresIn?: string,
+		options?: JWT.JWTVerifyOptions & { endpoints?: RequiredEndpointAuth }
+	): Promise<boolean> {
 		if (typeof expiresIn !== "string") {
 			options = expiresIn;
 		}
@@ -53,10 +78,16 @@ class Authorise {
 			return false;
 		}
 		if (!options.hasOwnProperty("maxTokenAge")) {
-			options.maxTokenAge = (typeof expiresIn) === "string" ? Math.floor(ms(expiresIn) / 1000) : undefined;
+			options.maxTokenAge =
+				typeof expiresIn === "string"
+					? Math.floor(ms(expiresIn) / 1000)
+					: undefined;
 		}
 		try {
-			const { payload, protectedHeader } = await this.jwtBuilder.verify(jwt, options);
+			const { payload, protectedHeader } = await this.jwtBuilder.verify(
+				jwt,
+				options
+			);
 			if (!(payload != undefined)) {
 				//console.log("payload is undefined after trying to verify jwt");
 				return false;
@@ -67,12 +98,22 @@ class Authorise {
 				}
 				let canAccess = false;
 				if (options) {
-					if ("endpoints" in options && options.endpoints != undefined) {
-						canAccess = options.endpoints[payload.lvl].includes(resource);
+					if (
+						"endpoints" in options &&
+						options.endpoints != undefined
+					) {
+						canAccess =
+							options.endpoints[payload.lvl].includes(resource);
 					}
 				}
-				if (!canAccess && "urls" in payload && Array.isArray(payload.urls)) {
-					canAccess = validateURLArray(payload.urls) && payload.urls.includes(resource);
+				if (
+					!canAccess &&
+					"urls" in payload &&
+					Array.isArray(payload.urls)
+				) {
+					canAccess =
+						validateURLArray(payload.urls) &&
+						payload.urls.includes(resource);
 				}
 				return canAccess;
 			} else {
@@ -101,7 +142,11 @@ class Authorise {
 		if (!matched) {
 			noneMatched = urlMatchArray(this.endpointSchema.none, path);
 		}
-		const accessCheck = noneMatched ? undefined : await this.#checkAccess(JWTCookie, path, {"endpoints": this.endpointSchema});
+		const accessCheck = noneMatched
+			? undefined
+			: await this.#checkAccess(JWTCookie, path, {
+					endpoints: this.endpointSchema,
+				});
 		if (noneMatched) {
 			return true;
 		} else if (JWTCookie !== "" && accessCheck) {

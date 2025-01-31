@@ -21,10 +21,11 @@ export async function middleware(req: NextRequest) {
 	const jwt = req.cookies.has(process.env.COOKIE_NAME)
 		? req.cookies.get(process.env.COOKIE_NAME)
 		: "";
-	if (endpoint == "/") {
-		if (await authService.checkAuth("/home", jwt.value)) {
+	if (endpoint == "/" || endpoint == "/home" || endpoint == "/login") {
+		const loggedIn = await authService.checkAuth("/home", jwt.value);
+		if (loggedIn && endpoint !== "/home") {
 			return NextResponse.redirect(new URL("/home", req.url));
-		} else {
+		} else if (!loggedIn && endpoint !== "/login") {
 			return NextResponse.redirect(new URL("/login", req.url));
 		}
 	}

@@ -1,1 +1,0 @@
-function update(a,b){b.send("Update")}function input(a,b){b.send("Input")}var sshProxy={update:update,input:input};export default sshProxy;

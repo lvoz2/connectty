@@ -4,12 +4,11 @@
   "description": "My personal website's server, wriiten in TypeScript",
   "main": "dist/index.js",
   "scripts": {
-    "test": "tests/test_main.js",
-    "build-babel": "rm dist/* ; npx tsc && babel src --extensions '.ts' -d dist",
-    "serve-tsx": "tsx watch src/index.ts",
-    "serve-node": "node --watch dist/index.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "exports": "./dist/index.js",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lvoz2/ts-server.git"
@@ -21,20 +20,27 @@
   },
   "homepage": "https://github.com/lvoz2/ts-server#readme",
   "dependencies": {
+    "@simplewebauthn/browser": "^13.0.0",
+    "@simplewebauthn/server": "^13.0.0",
     "argon2": "^0.41.1",
-    "cookie-parser": "^1.4.7",
+    "buffer": "^6.0.3",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2",
-    "helmet": "^8.0.0",
     "isomorphic-fetch": "^3.0.0",
-    "jsonwebtoken": "^9.0.2",
-    "nanoid": "^5.0.9",
+    "isomorphic-ws": "^5.0.0",
+    "jose": "^5.9.6",
+    "nanoid": "^5.0.8",
+    "next": "^15.1.6",
+    "peer": "^1.0.2",
+    "peerjs": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "ssh2": "^1.16.0",
-    "toobusy-js": "^0.5.1",
+    "url-matcher": "^0.2.2",
     "uuid": "^11.0.2",
-    "validator": "^13.12.0"
+    "validator": "^13.12.0",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.25.9",
@@ -46,13 +52,26 @@
     "@types/isomorphic-fetch": "^0.0.39",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^22.9.0",
+    "@types/react": "18.3.12",
     "@types/ssh2": "^1.15.1",
     "@types/toobusy-js": "^0.5.4",
     "@types/validator": "^13.12.2",
-    "babel-preset-minify": "^0.5.2",
+    "autoprefixer": "^10.4.20",
+    "html-webpack-plugin": "^5.6.3",
+    "lint-staged": "^15.3.0",
     "pkgroll": "^2.5.1",
+    "postcss": "^8.4.49",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^3.4.14",
     "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "uglify-js": "^3.19.3"
   },
-  "type": "module"
+  "type": "module",
+  "lint-staged": {
+    "*.{js,css,md}": "prettier --write"
+  },
+  "optionalDependencies": {
+    "bufferutil": "^4.0.9"
+  }
 }

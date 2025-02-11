@@ -3,7 +3,6 @@
 import { NextResponse } from "next/server";
 import { authorise } from "@/lib/authorise.ts";
 import utils from "@/lib/utils.ts";
-import { notFound } from "next/navigation";
 //import toobusy from "toobusy-js";
 
 const authService = authorise(
@@ -32,6 +31,5 @@ export async function middleware(req: NextRequest) {
 	const authStatus = await authService.checkAuth(endpoint, jwt.value);
 	if (!authStatus) {
 		return NextResponse.rewrite(new URL("/404", req.url));
-		//notFound();
 	}
 }

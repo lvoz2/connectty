@@ -26,7 +26,7 @@ export default async function handler(
 		} else {
 			const clientOpts = req.body.options;
 			// Get options from POST to /api/passkey/login/start
-			const { payload, protectedHeader } = await utils.jwtBuilder.verify(
+			const { payload } = await utils.jwtBuilder.verify(
 				req.body.jwt
 			);
 			// Remove JWT-specific properties, leaving the options
@@ -75,12 +75,11 @@ export default async function handler(
 					passkey[0].user_id,
 					utils.timeout
 				);
-				let cookies = res.getHeader("Set-Cookie") || [];
+				const cookies = res.getHeader("Set-Cookie") || [];
 				cookies.push(utils.cookieOptsToString(options));
 				res.setHeader("Set-Cookie", cookies);
 			}
 			res.json({ success: verified });
 		}
-	} else {
 	}
 }

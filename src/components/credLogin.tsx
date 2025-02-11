@@ -3,10 +3,10 @@
 import { useRef } from "react";
 
 export function CredentialLogin() {
-	let usernameRef = useRef(null);
-	let passwordRef = useRef(null);
+	const usernameRef = useRef(null);
+	const passwordRef = useRef(null);
 
-	function credLogin(e) {
+	function credLogin() {
 		grecaptcha.ready(function () {
 			grecaptcha
 				.execute("6LdHimkqAAAAAOXLRndbYvcmN3dzYjvLz7-5QBAD", {
@@ -15,7 +15,7 @@ export function CredentialLogin() {
 				.then((token) => {
 					const username = usernameRef.current.value;
 					const password = passwordRef.current.value;
-					let data = {
+					const data = {
 						token: token,
 						username: username,
 						password: password,
@@ -41,7 +41,7 @@ export function CredentialLogin() {
 
 	function handleClick(e) {
 		e.preventDefault();
-		credLogin(e);
+		credLogin();
 	}
 
 	return (

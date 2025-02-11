@@ -108,37 +108,10 @@ export class JWT {
 		this.key = key;
 	}
 
-	#shortPayload(payload: JWTPayloadLong): jose.JWTPayload {
-		const keys = Object.keys(payload);
-		let shortened: jose.JWTPayload = {};
-		for (let key in keys) {
-			switch (key) {
-				case "audience":
-					shortened.aud = payload.audience;
-					break;
-				case "expirationTime":
-					shortened.exp = payload.expirationTime;
-					break;
-				case "issuedAt":
-					shortened.iat = payload.issuedAt;
-					break;
-				case "issuer":
-					shortened.iss = payload.issuer;
-					break;
-				case "jwtID":
-					shortened.jti = payload.jwtID;
-					break;
-				default:
-					shortened[key] = payload[key];
-			}
-		}
-		return shortened;
-	}
-
 	#shortJSONWebKey(JSONWebKey: JWKLong): jose.JWK {
 		const keys = Object.keys(JSONWebKey);
-		let shortened: jose.JWTHeaderParameters = {};
-		for (let key in keys) {
+		const shortened: jose.JWTHeaderParameters = {};
+		for (const key in keys) {
 			switch (key) {
 				case "keyType":
 					shortened.kty = JSONWebKey[key];
@@ -213,8 +186,8 @@ export class JWT {
 	#shortProtectedHeader(
 		protectedHeader: JWTProtectedHeadersLong
 	): jose.JWTHeaderParameters {
-		let shortened: jose.JWTHeaderParameters = {};
-		for (let key in protectedHeader) {
+		const shortened: jose.JWTHeaderParameters = {};
+		for (const key in protectedHeader) {
 			switch (key) {
 				case "algorithm":
 					shortened.alg = protectedHeader[key];
@@ -260,7 +233,7 @@ export class JWT {
 	): Promise<string> {
 		const jwt = await new jose.SignJWT(payload);
 		if (options != undefined) {
-			for (let key in options) {
+			for (const key in options) {
 				switch (key) {
 					case "audience":
 						jwt.setAudience(options[key]);
@@ -331,15 +304,15 @@ export class JWT {
 		if (options != undefined) {
 			shortOptions = {};
 			const keys = Object.keys(options);
-			for (let key in keys) {
+			for (const key in keys) {
 				switch (key) {
 					case "critical":
-						shortOptions.crit = options.hasOwnProperty("crit")
+						shortOptions.crit = Object.hasOwnProperty.call(options, "crit")
 							? options.crit
 							: options.critical;
 						break;
 					case "type":
-						shortOptions.typ = options.hasOwnProperty("typ")
+						shortOptions.typ = Object.hasOwnProperty.call(options, "typ")
 							? options.typ
 							: options.type;
 						break;

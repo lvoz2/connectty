@@ -8,8 +8,6 @@ const authService = authenticate(
 	utils.cookieOptions
 );
 
-("use server");
-
 export default async function handler(
 	req: NextApiRequest,
 	res: NextApiResponse
@@ -35,7 +33,7 @@ export default async function handler(
 					utils.timeout
 				);
 				if (authStatus.status.status) {
-					let cookies = res.getHeader("Set-Cookie") || [];
+					const cookies = res.getHeader("Set-Cookie") || [];
 					cookies.push(
 						utils.cookieOptsToString(authStatus.cookieOptions)
 					);

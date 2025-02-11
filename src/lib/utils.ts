@@ -19,7 +19,6 @@ export const endpoints = {
 		"/api/passkey/register/*",
 	] /**/,
 };
-console.log(process.env.JWT_KEY);
 export const jwtBuilder = new JWT.JWT(
 	Buffer.from(process.env.JWT_KEY + "", "hex")
 );
@@ -80,7 +79,7 @@ export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
 						? "; Domain=" + cookieOpts.domain
 						: "");
 				break;
-			case "expires":
+			case "expires": {
 				if (!(cookiesOpts.expires instanceof Date)) {
 					break;
 				}
@@ -134,6 +133,7 @@ export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
 					second +
 					" GMT";
 				break;
+			}
 			case "httpOnly":
 				strForm = strForm + (cookieOpts.httpOnly ? "; HttpOnly" : "");
 				break;
@@ -187,12 +187,12 @@ export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
 	return strForm;
 }
 
-export function cookieOptions(
+export function convertCookieOptions(
 	name: string,
 	value: string,
 	overrides: CookieSerializeOptions = {}
 ): CookieSerializeOptions {
-	let options = {
+	const options = {
 		name: name,
 		value: value,
 		domain: ".lvoz2.duckdns.org",
@@ -215,6 +215,6 @@ export default {
 	urlMatchArray,
 	betterIsJWT,
 	validateURLArray,
-	cookieOptions,
+	convertCookieOptions,
 	cookieOptsToString,
 };

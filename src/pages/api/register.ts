@@ -1,5 +1,4 @@
 import { authenticate } from "@/lib/authenticate.ts";
-import argon2 from "argon2";
 import utils from "@/lib/utils.ts";
 import type { NextApiRequest, NextApiResponse } from "next";
 

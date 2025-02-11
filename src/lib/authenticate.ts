@@ -2,7 +2,7 @@ import argon2 from "argon2";
 import { v4 as uuidv4 } from "uuid";
 import { nanoid } from "nanoid";
 import JWT from "@/lib/jwt.ts";
-import { cookieOptions, validateURLArray, jwtBuilder } from "@/lib/utils.ts";
+import { convertCookieOptions, validateURLArray, jwtBuilder } from "@/lib/utils.ts";
 import { getDB, queryDB } from "@/lib/db.ts";
 
 interface JWTAuthPayload extends JWT.JWTPayloadLong {
@@ -16,7 +16,7 @@ interface RequiredEndpointAuth {
 	[key: string]: string[];
 }
 
-let instance: undefined | auth = undefined;
+const instance: undefined | auth = undefined;
 
 export function authenticate(
 	endpointSchema: RequiredEndpointAuth = undefined,
@@ -57,23 +57,17 @@ class Authenticate {
 
 	async #isUniqueUsername(username: string): Promise<number> {
 		let numUsers = 0;
-		try {
-			const result = await queryDB(
-				getDB(),
-				"SELECT username FROM users WHERE username = ?;",
-				[username]
+		const result = await queryDB(
+			getDB(),
+			"SELECT username FROM users WHERE username = ?;",
+			[username]
+		);
+		if (result && Array.isArray(result)) {
+			numUsers = result.length;
+		} else {
+			console.log(
+				"Could not verify username uniqueness: query returned invalid results"
 			);
-			if (result && Array.isArray(result)) {
-				numUsers = result.length;
-			} else {
-				console.log(
-					"Could not verify username uniqueness: query returned invalid results"
-				);
-			}
-		} catch (err) {
-			throw err;
-		} finally {
-			// Idk
 		}
 		if (Number.isInteger(numUsers)) {
 			return numUsers;
@@ -87,33 +81,27 @@ class Authenticate {
 		maxPermsLevel: string
 	): Promise<string[]> {
 		let status = "";
-		let uid = uuidv4();
-		console.log(await this.#isUniqueUsername(username));
-		try {
-			if ((await this.#isUniqueUsername(username)) == 0) {
-				const hash = await argon2.hash(password, {
-					type: argon2.argon2id,
-					memoryCost: 64 * 1024,
-					timeCost: 2,
-					parallelism: 1,
-				});
-				const insert = await queryDB(
-					getDB(),
-					"INSERT INTO users (id, username, password, max_perms) VALUES (?, ?, ?, ?);",
-					[uid, username, hash, maxPermsLevel]
-				);
-				const users = await queryDB(
-					getDB(),
-					"SELECT username FROM users WHERE username = ?;",
-					[username]
-				);
-				status = users.length == 1 ? "Success" : "";
-			} else {
-				status = "Username already in use";
-			}
-		} catch (err) {
-			//err.toString();
-			throw err;
+		const uid = uuidv4();
+		if ((await this.#isUniqueUsername(username)) == 0) {
+			const hash = await argon2.hash(password, {
+				type: argon2.argon2id,
+				memoryCost: 64 * 1024,
+				timeCost: 2,
+				parallelism: 1,
+			});
+			await queryDB(
+				getDB(),
+				"INSERT INTO users (id, username, password, max_perms) VALUES (?, ?, ?, ?);",
+				[uid, username, hash, maxPermsLevel]
+			);
+			const users = await queryDB(
+				getDB(),
+				"SELECT username FROM users WHERE username = ?;",
+				[username]
+			);
+			status = users.length == 1 ? "Success" : "";
+		} else {
+			status = "Username already in use";
 		}
 		return [status, uid];
 	}
@@ -125,34 +113,28 @@ class Authenticate {
 		let status = "Failed";
 		let uid;
 		let permsLevel = "none";
-		try {
-			const result = await queryDB(
-				getDB(),
-				"SELECT id, username, password, max_perms FROM users WHERE username = ?;",
-				[username]
-			);
-			let passwordHash;
-			if (Array.isArray(result)) {
-				if (result.length == 1) {
-					passwordHash = result[0]["password"];
-					status = (await argon2.verify(passwordHash, password))
-						? "Correct credentials"
-						: "Incorrect credentials";
-					if (status === "Correct credentials") {
-						permsLevel = result[0]["max_perms"];
-						uid = result[0]["id"];
-					}
-				} else {
-					// TEST_HASH is an argon2 hash used to ensure the timing of authentication is constant-ish,
-					// to mitigate a side-channel attack that leaks valid usernames. See the comment before
-					// this.authenticate() for more info
-					await argon2.verify(process.env.TEST_HASH, password);
+		const result = await queryDB(
+			getDB(),
+			"SELECT id, username, password, max_perms FROM users WHERE username = ?;",
+			[username]
+		);
+		let passwordHash;
+		if (Array.isArray(result)) {
+			if (result.length == 1) {
+				passwordHash = result[0]["password"];
+				status = (await argon2.verify(passwordHash, password))
+					? "Correct credentials"
+					: "Incorrect credentials";
+				if (status === "Correct credentials") {
+					permsLevel = result[0]["max_perms"];
+					uid = result[0]["id"];
 				}
+			} else {
+				// TEST_HASH is an argon2 hash used to ensure the timing of authentication is constant-ish,
+				// to mitigate a side-channel attack that leaks valid usernames. See the comment before
+				// this.authenticate() for more info
+				await argon2.verify(process.env.TEST_HASH, password);
 			}
-		} catch (err) {
-			throw err;
-		} finally {
-			// Idk
 		}
 		if (uid) {
 			return [status, uid, permsLevel];
@@ -167,7 +149,7 @@ class Authenticate {
 		urls?: string[]
 	): Promise<string> {
 		const jti = nanoid();
-		let payload: JWTAuthPayload = { usr: username, lvl: lvl };
+		const payload: JWTAuthPayload = { usr: username, lvl: lvl };
 		if (Array.isArray(urls)) {
 			payload.urls = urls;
 		}
@@ -192,8 +174,8 @@ class Authenticate {
 		password: string,
 		expiresIn: string = "10 mins"
 	) {
-		let status = { status: false, msg: "Failed" };
-		let validated = true;
+		const status = { status: false, msg: "Failed" };
+		const validated = true;
 		let correct;
 		let permsLevel = "none";
 		if (validated) {
@@ -213,7 +195,7 @@ class Authenticate {
 			}
 		}
 		const jwt = await this.#createAuthJWT(username, expiresIn, permsLevel);
-		const options = cookieOptions(
+		const options = convertCookieOptions(
 			process.env.COOKIE_NAME,
 			jwt,
 			this.cookieOptions
@@ -237,7 +219,7 @@ class Authenticate {
 			expiresIn,
 			permsLevel
 		);
-		const options = cookieOptions(
+		const options = convertCookieOptions(
 			process.env.COOKIE_NAME,
 			jwt,
 			this.cookieOptions
@@ -256,10 +238,9 @@ class Authenticate {
 			(Array.isArray(urls) && validateURLArray(urls)) || urls == undefined
 				? urls
 				: false;
-		let validated = urls != false;
-		let status = { status: false, msg: "Failed" };
+		const validated = urls != false;
+		const status = { status: false, msg: "Failed" };
 		if (validated) {
-			console.log(await this.#isUniqueUsername(username));
 			if ((await this.#isUniqueUsername(username)) == 0) {
 				const sqlStatus = await this.#createUser(
 					username,
@@ -276,7 +257,7 @@ class Authenticate {
 			permsLevel,
 			urls
 		);
-		const options = cookieOptions(
+		const options = convertCookieOptions(
 			process.env.COOKIE_NAME,
 			jwt,
 			this.cookieOptions

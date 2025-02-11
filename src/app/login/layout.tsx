@@ -8,7 +8,7 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<head>
-				<title>lv_oz2's Website</title>
+				<title>lv_oz2&apos;s Website</title>
 				<script
 					src="https://unpkg.com/react-scan/dist/auto.global.js"
 					async

@@ -28,6 +28,11 @@ export function PasskeyRegister() {
 				body: JSON.stringify({ jwt: jwt, options: options }),
 			}
 		).then((res) => res.json());
+		if (registrationSuccess.status) {
+			console.log("Success");
+		} else {
+			console.log("Failure");
+		}
 	}
 
 	function handleClick(e) {

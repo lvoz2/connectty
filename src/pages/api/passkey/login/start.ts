@@ -7,6 +7,5 @@ export default async function handler(
 ) {
 	if (req.method === "GET") {
 		res.json({ jwt: await createOptions() });
-	} else {
 	}
 }

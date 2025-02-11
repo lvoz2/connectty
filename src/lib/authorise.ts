@@ -1,26 +1,18 @@
 import JWT from "@/lib/jwt.ts";
 import ms from "ms";
 import {
-	cookieOptions,
 	validateURLArray,
 	urlMatchArray,
 	jwtBuilder,
 	betterIsJWT,
 } from "@/lib/utils.ts";
 
-("use server");
-
-interface JWTAuthPayload extends JWT.JWTPayload {
-	lvl: string;
-	urls?: string[];
-}
-
 interface RequiredEndpointAuth {
 	none: string[];
 	[key: string]: string[];
 }
 
-let instance: undefined | auth = undefined;
+const instance: undefined | auth = undefined;
 
 export function authorise(
 	endpointSchema: RequiredEndpointAuth = undefined,
@@ -77,52 +69,46 @@ class Authorise {
 			console.log("Error thing:", err);
 			return false;
 		}
-		if (!options.hasOwnProperty("maxTokenAge")) {
+		if (!Object.hasOwnProperty.call(options, "maxTokenAge")) {
 			options.maxTokenAge =
 				typeof expiresIn === "string"
 					? Math.floor(ms(expiresIn) / 1000)
 					: undefined;
 		}
-		try {
-			const { payload, protectedHeader } = await this.jwtBuilder.verify(
-				jwt,
-				options
-			);
-			if (!(payload != undefined)) {
-				//console.log("payload is undefined after trying to verify jwt");
-				return false;
+		const { payload } = await this.jwtBuilder.verify(
+			jwt,
+			options
+		);
+		if (!(payload != undefined)) {
+			//console.log("payload is undefined after trying to verify jwt");
+			return false;
+		}
+		if ("lvl" in payload) {
+			if (payload.lvl === "full") {
+				return true;
 			}
-			if ("lvl" in payload) {
-				if (payload.lvl === "full") {
-					return true;
-				}
-				let canAccess = false;
-				if (options) {
-					if (
-						"endpoints" in options &&
-						options.endpoints != undefined
-					) {
-						canAccess =
-							options.endpoints[payload.lvl].includes(resource);
-					}
-				}
+			let canAccess = false;
+			if (options) {
 				if (
-					!canAccess &&
-					"urls" in payload &&
-					Array.isArray(payload.urls)
+					"endpoints" in options &&
+					options.endpoints != undefined
 				) {
 					canAccess =
-						validateURLArray(payload.urls) &&
-						payload.urls.includes(resource);
+						options.endpoints[payload.lvl].includes(resource);
 				}
-				return canAccess;
-			} else {
-				console.log("lvl was not in payload, so not right shape jwt");
-				return false;
 			}
-		} catch (err) {
-			throw err;
-			console.log("err");
+			if (
+				!canAccess &&
+				"urls" in payload &&
+				Array.isArray(payload.urls)
+			) {
+				canAccess =
+					validateURLArray(payload.urls) &&
+					payload.urls.includes(resource);
+			}
+			return canAccess;
+		} else {
+			console.log("lvl was not in payload, so not right shape jwt");
 			return false;
 		}
 	}
@@ -133,7 +119,7 @@ class Authorise {
 		}
 		JWTCookie = JWTCookie == undefined ? "" : JWTCookie.toString();
 		let matched = false;
-		for (let key in this.endpointSchema) {
+		for (const key in this.endpointSchema) {
 			if (key != "none" && !matched) {
 				matched = urlMatchArray(this.endpointSchema[key], path);
 			}

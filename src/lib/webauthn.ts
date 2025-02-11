@@ -12,7 +12,7 @@ export const passkeyRp = {
 };
 
 export async function createOptions() {
-	const passkeyOptions: PublicKeyCredentialRequestOptionsJSON =
+	const passkeyOptions: PublicKeyCredentialCreationOptionsJSON =
 		await generateAuthenticationOptions({
 			rpID: passkeyRp.id,
 		});

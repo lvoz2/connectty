@@ -12,7 +12,7 @@ export default async function handler(
 ) {
 	if (req.method === "POST") {
 		const clientOpts = req.body.options;
-		const authJwt = req.cookies.hasOwnProperty(process.env.COOKIE_NAME)
+		const authJwt = Object.hasOwnProperty.call(req.cookies, process.env.COOKIE_NAME)
 			? req.cookies[process.env.COOKIE_NAME]
 			: "";
 		const authJwtParts = await jwtBuilder.verify(authJwt);
@@ -26,7 +26,7 @@ export default async function handler(
 			)
 		)[0];
 		// Get options from POST to /api/passkey/register/start
-		const { payload, protectedHeader } = await jwtBuilder.verify(
+		const { payload } = await jwtBuilder.verify(
 			req.body.jwt
 		);
 		// Remove JWT-specific properties, leaving the options
@@ -47,7 +47,7 @@ export default async function handler(
 		}*/
 		const verified = verification.verified;
 		if (verified) {
-			const { credential, credentialDeviceType, credentialBackedUp } =
+			const { credential } =
 				verification.registrationInfo;
 			// Save authenticator (passkey) to DB
 			const passkey = {
@@ -70,6 +70,5 @@ export default async function handler(
 			);
 		}
 		res.json({ status: verified });
-	} else {
 	}
 }

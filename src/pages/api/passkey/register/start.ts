@@ -15,10 +15,10 @@ export default async function handler(
 	res: NextApiResponse
 ) {
 	if (req.method === "GET") {
-		const authJwt = req.cookies.hasOwnProperty(process.env.COOKIE_NAME)
+		const authJwt = Object.hasOwnProperty.call(req.cookies, process.env.COOKIE_NAME)
 			? req.cookies[process.env.COOKIE_NAME]
 			: "";
-		const { payload, protectedHeader } = await jwtBuilder.verify(authJwt);
+		const { payload } = await jwtBuilder.verify(authJwt);
 		const username = payload.usr;
 		// Get user id and name
 		const user = (
@@ -35,7 +35,6 @@ export default async function handler(
 			[user.id]
 		);
 		let excludeCredentials;
-		console.log(passkeys);
 		if (passkeys.length > 0) {
 			excludeCredentials = passkeys.map((passkey) => ({
 				id: passkey.credential_id,
@@ -43,7 +42,6 @@ export default async function handler(
 		} else {
 			excludeCredentials = [];
 		}
-		console.log(excludeCredentials);
 		const passkeyOptions: PublicKeyCredentialCreationOptionsJSON =
 			await generateRegistrationOptions({
 				rpName: passkeyRp.name,
@@ -58,6 +56,5 @@ export default async function handler(
 			expirationTime: "5 mins",
 		});
 		res.json({ jwt: jwt });
-	} else {
 	}
 }

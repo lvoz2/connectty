@@ -3,8 +3,7 @@
 import { startRegistration } from "@simplewebauthn/browser";
 
 export function PasskeyRegister() {
-	async function passkeyRegister(e) {
-		e.preventDefault();
+	async function passkeyRegister() {
 		// Get the options for passkey login, as a jwt
 		const jwt = (
 			await fetch("/api/passkey/register/start").then((res) => res.json())
@@ -35,8 +34,9 @@ export function PasskeyRegister() {
 		}
 	}
 
-	function handleClick(e) {
-		passkeyRegister(e);
+	function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
+		e.preventDefault();
+		passkeyRegister();
 	}
 
 	return (

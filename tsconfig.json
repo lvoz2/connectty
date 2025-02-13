@@ -2,17 +2,17 @@
   "compilerOptions": {
     "target": "ESNext",
     "lib": [
-      "esnext"
+      "esnext",
+      "dom",
     ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "baseUrl": "./",
     "typeRoots": [
       "./node_modules/@types",
-      "./types"
     ],
     "allowImportingTsExtensions": true,
-    "declaration": true,
+    "declaration": false,
     "noEmitOnError": true,
     "isolatedModules": true,
     "esModuleInterop": true,
@@ -37,12 +37,12 @@
     }
   },
   "exclude": [
-    "node_modules"
+    "node_modules/**/*",
+    "node_modules/next",
   ],
   "include": [
-    "bin/*.ts",
     "src/**/*.ts",
-    "types/*.d.ts",
-    ".next/types/**/*.ts"
+    "src/**/*.tsx",
+    "env.d.ts",
   ]
 }

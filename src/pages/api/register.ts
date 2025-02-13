@@ -5,7 +5,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 const authService = authenticate(
 	utils.endpoints,
 	utils.timeout,
-	utils.cookieOptions
+	utils.createCookieOptions()
 );
 
 export default async function handler(

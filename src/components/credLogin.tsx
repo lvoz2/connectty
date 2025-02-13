@@ -3,18 +3,20 @@
 import { useRef } from "react";
 
 export function CredentialLogin() {
-	const usernameRef = useRef(null);
-	const passwordRef = useRef(null);
+	const usernameRef = useRef<HTMLInputElement>(null);
+	const passwordRef = useRef<HTMLInputElement>(null);
 
 	function credLogin() {
+		const usernameE: HTMLInputElement | null = usernameRef.current;
+		const passwordE: HTMLInputElement | null = passwordRef.current;
 		grecaptcha.ready(function () {
 			grecaptcha
-				.execute("6LdHimkqAAAAAOXLRndbYvcmN3dzYjvLz7-5QBAD", {
+				.execute("0x4AAAAAAA8j4p6VGvi4hKXL", {
 					action: "submit",
 				})
-				.then((token) => {
-					const username = usernameRef.current.value;
-					const password = passwordRef.current.value;
+				.then((token: string) => {
+					const username = usernameE == null ? "" : usernameE.value;
+					const password = passwordE == null ? "" : passwordE.value;
 					const data = {
 						token: token,
 						username: username,
@@ -31,7 +33,7 @@ export function CredentialLogin() {
 						.then((response) => response.json())
 						.then((json) => {
 							if (json.success) {
-								window.location = "https://lvoz2.duckdns.org";
+								window.location.reload();
 							}
 						})
 						.catch((error) => console.log(error));
@@ -39,7 +41,7 @@ export function CredentialLogin() {
 		});
 	}
 
-	function handleClick(e) {
+	function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
 		e.preventDefault();
 		credLogin();
 	}

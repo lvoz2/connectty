@@ -3,6 +3,22 @@ import { matchPattern } from "url-matcher";
 import JWT from "@/lib/jwt.ts";
 import { Buffer } from "buffer";
 
+export interface CookieSerialiseOptions {
+	name?: string;
+	value?: string;
+	maxAge?: number;
+	signed?: boolean;
+	expires?: Date;
+	httpOnly?: boolean;
+	path?: string;
+	domain?: string;
+	secure?: boolean;
+	encode?: (val: string) => string;
+	sameSite?: boolean | "lax" | "strict" | "none";
+	priority?: "low" | "medium" | "high";
+	partitioned?: boolean;
+}
+
 // JWT Timeout
 // Set to something jose can understand
 export const timeout = "10 mins";
@@ -23,7 +39,7 @@ export const jwtBuilder = new JWT.JWT(
 	Buffer.from(process.env.JWT_KEY + "", "hex")
 );
 
-export function urlMatchArray(urlArray, path) {
+export function urlMatchArray(urlArray: string[], path: string) {
 	let matched = false;
 	for (const url of urlArray) {
 		matched = matchPattern(url, path) != undefined;
@@ -55,7 +71,12 @@ export function validateURLArray(urls: string[]): boolean {
 	}, true);
 }
 
-export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
+export function cookieOptsToString(cookieOpts: CookieSerialiseOptions): string {
+	if (cookieOpts.name == undefined || cookieOpts.value == undefined) {
+		throw new Error(
+			"Cannot stringify cookie if no name and/or value supplied"
+		);
+	}
 	const optsKeys = Object.keys(cookieOpts);
 	let strForm =
 		cookieOpts.name +
@@ -80,7 +101,7 @@ export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
 						: "");
 				break;
 			case "expires": {
-				if (!(cookiesOpts.expires instanceof Date)) {
+				if (!(cookieOpts.expires instanceof Date)) {
 					break;
 				}
 				const dayOfWeek = [
@@ -138,11 +159,13 @@ export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
 				strForm = strForm + (cookieOpts.httpOnly ? "; HttpOnly" : "");
 				break;
 			case "maxAge":
-				strForm =
-					strForm +
-					(Number.isInteger(cookieOpts.maxAge)
-						? "; Max-Age=" + cookieOpts.maxAge.toString()
-						: "");
+				if (cookieOpts.maxAge != undefined) {
+					strForm =
+						strForm +
+						(Number.isInteger(cookieOpts.maxAge)
+							? "; Max-Age=" + cookieOpts.maxAge.toString()
+							: "");
+				}
 				break;
 			case "partitioned":
 				strForm =
@@ -187,25 +210,34 @@ export function cookieOptsToString(cookieOpts: CookieSerializeOptions): string {
 	return strForm;
 }
 
-export function convertCookieOptions(
-	name: string,
-	value: string,
-	overrides: CookieSerializeOptions = {}
-): CookieSerializeOptions {
-	const options = {
-		name: name,
-		value: value,
-		domain: ".lvoz2.duckdns.org",
-		maxAge: 3600000,
-		path: "/",
-		httpOnly: true,
-		sameSite: "strict",
-		secure: true,
-	};
-	for (key in Object.keys(overrides)) {
-		options[key] = overrides[key];
+export function createCookieOptions(
+	name?: string,
+	value?: string,
+	overrides: CookieSerialiseOptions = {}
+): CookieSerialiseOptions {
+	if (name != undefined) {
+		const defaultOptions = {
+			name: name,
+			value: value,
+			domain: ".lvoz2.duckdns.org",
+			maxAge: 3600000,
+			path: "/",
+			httpOnly: true,
+			sameSite: "strict",
+			secure: true,
+		} as CookieSerialiseOptions;
+		return { ...defaultOptions, ...overrides };
+	} else {
+		const defaultOptions = {
+			domain: ".lvoz2.duckdns.org",
+			maxAge: 3600000,
+			path: "/",
+			httpOnly: true,
+			sameSite: "strict",
+			secure: true,
+		} as CookieSerialiseOptions;
+		return { ...defaultOptions, ...overrides };
 	}
-	return options;
 }
 
 export default {
@@ -215,6 +247,6 @@ export default {
 	urlMatchArray,
 	betterIsJWT,
 	validateURLArray,
-	convertCookieOptions,
+	createCookieOptions,
 	cookieOptsToString,
 };

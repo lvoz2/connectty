@@ -11,7 +11,8 @@ export async function queryDB(
 	db: Database,
 	query: string,
 	params: string[]
-): Promise<string[]> {
+): Promise<any[]> {
+	/* eslint @typescript-eslint/no-explicit-any: "off" */ // Disabled becuase of unpredictable DB return types
 	if (db) {
 		const stmt: Statement = await db.prepare(query);
 		stmt.bind(params);

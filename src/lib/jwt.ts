@@ -26,7 +26,7 @@ export interface JWKLong {
 	yCoordinate?: string;
 }
 
-interface JWTProtectedHeadersLong {
+export interface JWTProtectedHeadersLong {
 	algorithm: string;
 	useBase64UrlEncoding?: boolean;
 	critical?: string[];
@@ -48,7 +48,7 @@ interface JWTProtectedHeadersLong {
 	x509Url: string;
 }
 
-interface JWTPayloadLong {
+export interface JWTPayloadLong {
 	audience?: string | string[];
 	expirationTime?: number | Date | string;
 	issuedAt?: number | Date | string;
@@ -58,11 +58,11 @@ interface JWTPayloadLong {
 	subject?: string;
 }
 
-interface JWTSignOptions extends JWTPayloadLong {
+export interface JWTSignOptions extends JWTPayloadLong {
 	protectedHeaders?: JWTProtectedHeadersLong;
 }
 
-interface JWTVerifyOptions extends jose.JWTVerifyOptions {
+export interface JWTVerifyOptions extends jose.JWTVerifyOptions {
 	critical?: object;
 	type?: string;
 }
@@ -109,8 +109,10 @@ export class JWT {
 	}
 
 	#shortJSONWebKey(JSONWebKey: JWKLong): jose.JWK {
-		const keys = Object.keys(JSONWebKey);
-		const shortened: jose.JWTHeaderParameters = {};
+		const keys: string[] = Object.keys(JSONWebKey);
+		const shortened: jose.JWTHeaderParameters = {
+			alg: JSONWebKey.algorithm,
+		};
 		for (const key in keys) {
 			switch (key) {
 				case "keyType":
@@ -227,10 +229,7 @@ export class JWT {
 		return shortened;
 	}
 
-	async sign(
-		payload: JWTPayloadLong,
-		options?: JWTSignOptions
-	): Promise<string> {
+	async sign(payload: object, options?: JWTSignOptions): Promise<string> {
 		const jwt = await new jose.SignJWT(payload);
 		if (options != undefined) {
 			for (const key in options) {
@@ -307,12 +306,18 @@ export class JWT {
 			for (const key in keys) {
 				switch (key) {
 					case "critical":
-						shortOptions.crit = Object.hasOwnProperty.call(options, "crit")
+						shortOptions.crit = Object.hasOwnProperty.call(
+							options,
+							"crit"
+						)
 							? options.crit
 							: options.critical;
 						break;
 					case "type":
-						shortOptions.typ = Object.hasOwnProperty.call(options, "typ")
+						shortOptions.typ = Object.hasOwnProperty.call(
+							options,
+							"typ"
+						)
 							? options.typ
 							: options.type;
 						break;
@@ -325,6 +330,7 @@ export class JWT {
 			const result = await jose.jwtVerify(jwt, this.key, shortOptions);
 			return result;
 		} catch (err) {
+			console.log(err);
 			if (err instanceof jose.errors.JWSSignatureVerificationFailed) {
 				return { payload: undefined, protectedHeader: undefined };
 			} else if (err instanceof jose.errors.JWTExpired) {
@@ -336,5 +342,8 @@ export class JWT {
 		}
 	}
 }
+// Disbaled becuase this is an alias for another interface
+export interface JWTPayload
+	extends jose.JWTPayload {} /* eslint @typescript-eslint/no-empty-object-type: "off" */
 
 export default { JWT, betterIsJWT };

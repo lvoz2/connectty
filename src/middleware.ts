@@ -1,14 +1,16 @@
 "use server";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { authorise } from "@/lib/authorise.ts";
 import utils from "@/lib/utils.ts";
 //import toobusy from "toobusy-js";
 
+const defaultCookieOptions = utils.createCookieOptions();
+
 const authService = authorise(
 	utils.endpoints,
 	utils.timeout,
-	utils.cookieOptions
+	defaultCookieOptions
 );
 
 export async function middleware(req: NextRequest) {
@@ -19,7 +21,11 @@ export async function middleware(req: NextRequest) {
 	const endpoint = req.nextUrl.pathname;
 	const jwt = req.cookies.has(process.env.COOKIE_NAME)
 		? req.cookies.get(process.env.COOKIE_NAME)
-		: "";
+		: { name: process.env.COOKIE_NAME, value: "" };
+	if (jwt == undefined || jwt.value.length == 0) {
+		return NextResponse.rewrite(new URL("/404", req.url));
+	}
+	console.log(jwt);
 	if (endpoint == "/" || endpoint == "/home" || endpoint == "/login") {
 		const loggedIn = await authService.checkAuth("/home", jwt.value);
 		if (loggedIn && endpoint !== "/home") {

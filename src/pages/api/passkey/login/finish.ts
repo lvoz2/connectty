@@ -12,7 +12,7 @@ const db = getDB();
 const authService = authenticate(
 	utils.endpoints,
 	utils.timeout,
-	utils.cookieOptions
+	utils.createCookieOptions()
 );
 
 export default async function handler(
@@ -26,14 +26,19 @@ export default async function handler(
 		} else {
 			const clientOpts = req.body.options;
 			// Get options from POST to /api/passkey/login/start
-			const { payload } = await utils.jwtBuilder.verify(
-				req.body.jwt
-			);
+			const { payload } = await utils.jwtBuilder.verify(req.body.jwt);
+			if (payload == undefined) {
+				throw new Error(
+					"No JWT supplied with options from login start request"
+				);
+			}
 			// Remove JWT-specific properties, leaving the options
 			delete payload.jti;
 			delete payload.exp;
+			// Re-cast options as format required by @simplewebauthn/server, as we have verified that it is safe to do so
+			// It's safe because this is what we sent to the browser originally, thanks to JWTs
 			const currentOptions: PublicKeyCredentialRequestOptionsJSON =
-				payload;
+				payload as unknown as PublicKeyCredentialRequestOptionsJSON;
 			// Get passkey that will be used for the final step
 			const passkey = await queryDB(
 				db,
@@ -75,9 +80,12 @@ export default async function handler(
 					passkey[0].user_id,
 					utils.timeout
 				);
-				const cookies = res.getHeader("Set-Cookie") || [];
-				cookies.push(utils.cookieOptsToString(options));
-				res.setHeader("Set-Cookie", cookies);
+				const cookieHeader = res.getHeader("Set-Cookie");
+				if (Array.isArray(cookieHeader)) {
+					const cookies: string[] = cookieHeader || [];
+					cookies.push(utils.cookieOptsToString(options));
+					res.setHeader("Set-Cookie", cookies);
+				}
 			}
 			res.json({ success: verified });
 		}

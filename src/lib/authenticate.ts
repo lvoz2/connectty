@@ -1,11 +1,23 @@
 import argon2 from "argon2";
 import { v4 as uuidv4 } from "uuid";
 import { nanoid } from "nanoid";
-import JWT from "@/lib/jwt.ts";
-import { convertCookieOptions, validateURLArray, jwtBuilder } from "@/lib/utils.ts";
+import { JWT, type JWTPayloadLong } from "@/lib/jwt.ts";
+import {
+	createCookieOptions,
+	validateURLArray,
+	jwtBuilder,
+	type CookieSerialiseOptions,
+} from "@/lib/utils.ts";
 import { getDB, queryDB } from "@/lib/db.ts";
+import * as jose from "jose";
 
-interface JWTAuthPayload extends JWT.JWTPayloadLong {
+export interface JWTAuthPayloadLong extends JWTPayloadLong {
+	usr: string;
+	lvl: string;
+	urls?: string[];
+}
+
+export interface JWTAuthPayload extends jose.JWTPayload {
 	usr: string;
 	lvl: string;
 	urls?: string[];
@@ -16,12 +28,12 @@ interface RequiredEndpointAuth {
 	[key: string]: string[];
 }
 
-const instance: undefined | auth = undefined;
+let instance: undefined | Authenticate = undefined;
 
 export function authenticate(
-	endpointSchema: RequiredEndpointAuth = undefined,
-	inactivityTimeout: number = undefined,
-	cookieOptions: CookieSerializeOptions = undefined
+	endpointSchema: RequiredEndpointAuth | undefined = undefined,
+	inactivityTimeout: string | undefined = undefined,
+	cookieOptions: CookieSerialiseOptions | undefined = undefined
 ) {
 	if (instance != undefined) {
 		return instance;
@@ -31,11 +43,12 @@ export function authenticate(
 		endpointSchema != undefined &&
 		inactivityTimeout != undefined
 	) {
-		return new Authenticate(
+		instance = new Authenticate(
 			endpointSchema,
 			inactivityTimeout,
 			cookieOptions
 		);
+		return instance;
 	} else {
 		throw new TypeError(
 			"All arguments must be provided to instantiate a new class"
@@ -44,10 +57,15 @@ export function authenticate(
 }
 
 class Authenticate {
+	endpointSchema: RequiredEndpointAuth;
+	inactivityTimeout: string;
+	cookieOptions: CookieSerialiseOptions;
+	jwtBuilder: JWT;
+
 	constructor(
 		endpointSchema: RequiredEndpointAuth,
-		inactivityTimeout: number,
-		cookieOptions: CookieSerializeOptions
+		inactivityTimeout: string,
+		cookieOptions: CookieSerialiseOptions
 	) {
 		this.cookieOptions = cookieOptions;
 		this.endpointSchema = endpointSchema;
@@ -79,8 +97,9 @@ class Authenticate {
 		username: string,
 		password: string,
 		maxPermsLevel: string
-	): Promise<string[]> {
-		let status = "";
+	): Promise<[boolean, string] | [boolean, string, string]> {
+		let status = false;
+		let err = undefined;
 		const uid = uuidv4();
 		if ((await this.#isUniqueUsername(username)) == 0) {
 			const hash = await argon2.hash(password, {
@@ -99,9 +118,12 @@ class Authenticate {
 				"SELECT username FROM users WHERE username = ?;",
 				[username]
 			);
-			status = users.length == 1 ? "Success" : "";
+			status = users.length == 1;
 		} else {
-			status = "Username already in use";
+			err = "Username already in use";
+		}
+		if (err != undefined) {
+			return [status, uid, err];
 		}
 		return [status, uid];
 	}
@@ -149,7 +171,7 @@ class Authenticate {
 		urls?: string[]
 	): Promise<string> {
 		const jti = nanoid();
-		const payload: JWTAuthPayload = { usr: username, lvl: lvl };
+		const payload: JWTAuthPayloadLong = { usr: username, lvl: lvl };
 		if (Array.isArray(urls)) {
 			payload.urls = urls;
 		}
@@ -187,7 +209,7 @@ class Authenticate {
 				correct = false;
 			}
 		}
-		if (correct) {
+		if (Array.isArray(correct)) {
 			if (correct[0]) {
 				status.msg = "Success";
 				status.status = true;
@@ -195,7 +217,7 @@ class Authenticate {
 			}
 		}
 		const jwt = await this.#createAuthJWT(username, expiresIn, permsLevel);
-		const options = convertCookieOptions(
+		const options = createCookieOptions(
 			process.env.COOKIE_NAME,
 			jwt,
 			this.cookieOptions
@@ -219,7 +241,7 @@ class Authenticate {
 			expiresIn,
 			permsLevel
 		);
-		const options = convertCookieOptions(
+		const options = createCookieOptions(
 			process.env.COOKIE_NAME,
 			jwt,
 			this.cookieOptions
@@ -234,12 +256,9 @@ class Authenticate {
 		permsLevel: string = "basic",
 		urls?: string[]
 	) {
-		urls =
-			(Array.isArray(urls) && validateURLArray(urls)) || urls == undefined
-				? urls
-				: false;
-		const validated = urls != false;
-		const status = { status: false, msg: "Failed" };
+		urls = Array.isArray(urls) && validateURLArray(urls) ? urls : undefined;
+		const validated = urls != undefined;
+		const status = { status: false, msg: "Failed", errText: "" };
 		if (validated) {
 			if ((await this.#isUniqueUsername(username)) == 0) {
 				const sqlStatus = await this.#createUser(
@@ -248,6 +267,9 @@ class Authenticate {
 					permsLevel
 				);
 				status.status = sqlStatus[0];
+				if (sqlStatus.length == 3) {
+					status.errText = sqlStatus[2];
+				}
 				status.msg = sqlStatus[0] ? "Success" : "Failed";
 			}
 		}
@@ -257,7 +279,7 @@ class Authenticate {
 			permsLevel,
 			urls
 		);
-		const options = convertCookieOptions(
+		const options = createCookieOptions(
 			process.env.COOKIE_NAME,
 			jwt,
 			this.cookieOptions

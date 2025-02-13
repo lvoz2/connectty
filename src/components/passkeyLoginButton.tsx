@@ -4,9 +4,17 @@ import { startAuthentication } from "@simplewebauthn/browser";
 import { useEffect } from "react";
 
 export function PasskeyButton() {
-	async function passkeyLogin(useBrowserAutofill) {
+	async function passkeyLogin(useBrowserAutofill: boolean) {
 		// Get the options for passkey login, as a jwt
-		const jwt = document.getElementById("webauthnOptions").value;
+		const jwtE = document.getElementById(
+			"webauthnOptions"
+		) as HTMLInputElement | null;
+		const jwt =
+			jwtE != undefined
+				? Object.hasOwnProperty.call(jwtE, "value")
+					? jwtE.value
+					: ""
+				: "";
 		// Get and decode the body section of the jwt
 		const jwtBody = JSON.parse(atob(jwt.split(".")[1]));
 		// Clean up the body
@@ -34,7 +42,7 @@ export function PasskeyButton() {
 			if (verifyResponse.success) {
 				console.log("Login success");
 				await fetch("/api/test-auth-status");
-				window.location.reload(true);
+				window.location.reload();
 			} else {
 				console.log("Login failure");
 			}
@@ -46,7 +54,7 @@ export function PasskeyButton() {
 		}
 	}
 
-	function handleClick(e) {
+	function handleClick(e: React.MouseEvent<HTMLButtonElement>) {
 		e.preventDefault();
 		passkeyLogin(false);
 	}

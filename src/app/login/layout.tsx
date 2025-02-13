@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 export default function RootLayout({
 	children,
 }: {
@@ -13,10 +11,11 @@ export default function RootLayout({
 					src="https://unpkg.com/react-scan/dist/auto.global.js"
 					async
 				/>
-				<Script
-					strategy="lazyOnload"
-					src="https://www.google.com/recaptcha/api.js?render=6LdHimkqAAAAAOXLRndbYvcmN3dzYjvLz7-5QBAD"
-				></Script>
+				<script
+					src="https://challenges.cloudflare.com/turnstile/v0/api.js?compat=recaptcha"
+					async
+					defer
+				></script>
 			</head>
 			<body>{children}</body>
 		</html>

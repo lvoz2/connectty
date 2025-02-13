@@ -1,23 +1,32 @@
-import JWT from "@/lib/jwt.ts";
-import ms from "ms";
+"use server";
+
+import { JWT, type JWTVerifyOptions } from "@/lib/jwt.ts";
 import {
 	validateURLArray,
 	urlMatchArray,
 	jwtBuilder,
 	betterIsJWT,
+	type CookieSerialiseOptions,
 } from "@/lib/utils.ts";
+import * as jose from "jose";
 
 interface RequiredEndpointAuth {
 	none: string[];
 	[key: string]: string[];
 }
 
-const instance: undefined | auth = undefined;
+export interface JWTAuthPayload extends jose.JWTPayload {
+	usr: string;
+	lvl: string;
+	urls?: string[];
+}
+
+let instance: undefined | Authorise = undefined;
 
 export function authorise(
-	endpointSchema: RequiredEndpointAuth = undefined,
-	inactivityTimeout: number = undefined,
-	cookieOptions: CookieSerializeOptions = undefined
+	endpointSchema: RequiredEndpointAuth | undefined = undefined,
+	inactivityTimeout: string | undefined = undefined,
+	cookieOptions: CookieSerialiseOptions | undefined = undefined
 ) {
 	if (instance != undefined) {
 		return instance;
@@ -27,7 +36,12 @@ export function authorise(
 		endpointSchema != undefined &&
 		inactivityTimeout != undefined
 	) {
-		return new Authorise(endpointSchema, inactivityTimeout, cookieOptions);
+		instance = new Authorise(
+			endpointSchema,
+			inactivityTimeout,
+			cookieOptions
+		);
+		return instance;
 	} else {
 		throw new TypeError(
 			"All arguments must be provided to instantiate a new class"
@@ -36,10 +50,15 @@ export function authorise(
 }
 
 class Authorise {
+	endpointSchema: RequiredEndpointAuth;
+	inactivityTimeout: string;
+	cookieOptions: CookieSerialiseOptions;
+	jwtBuilder: JWT;
+
 	constructor(
 		endpointSchema: RequiredEndpointAuth,
-		inactivityTimeout: number,
-		cookieOptions: CookieSerializeOptions
+		inactivityTimeout: string,
+		cookieOptions: CookieSerialiseOptions
 	) {
 		this.cookieOptions = cookieOptions;
 		this.endpointSchema = endpointSchema;
@@ -50,13 +69,10 @@ class Authorise {
 	async #checkAccess(
 		jwt: string,
 		resource: string,
-		expiresIn?: string,
-		options?: JWT.JWTVerifyOptions & { endpoints?: RequiredEndpointAuth }
+		options: JWTVerifyOptions & { endpoints?: RequiredEndpointAuth }
 	): Promise<boolean> {
-		if (typeof expiresIn !== "string") {
-			options = expiresIn;
-		}
 		if (jwt.toString().length == 0) {
+			//console.log("Empty JWT or not string-like");
 			return false;
 		}
 		try {
@@ -66,21 +82,14 @@ class Authorise {
 				return false;
 			}
 		} catch (err) {
-			console.log("Error thing:", err);
+			console.log("Error:", err);
 			return false;
 		}
-		if (!Object.hasOwnProperty.call(options, "maxTokenAge")) {
-			options.maxTokenAge =
-				typeof expiresIn === "string"
-					? Math.floor(ms(expiresIn) / 1000)
-					: undefined;
-		}
-		const { payload } = await this.jwtBuilder.verify(
-			jwt,
-			options
-		);
-		if (!(payload != undefined)) {
-			//console.log("payload is undefined after trying to verify jwt");
+		const payload = (await this.jwtBuilder.verify(jwt, options)).payload as
+			| JWTAuthPayload
+			| undefined;
+		if (payload == undefined) {
+			console.log("payload is undefined after trying to verify jwt");
 			return false;
 		}
 		if ("lvl" in payload) {
@@ -89,10 +98,7 @@ class Authorise {
 			}
 			let canAccess = false;
 			if (options) {
-				if (
-					"endpoints" in options &&
-					options.endpoints != undefined
-				) {
+				if ("endpoints" in options && options.endpoints != undefined) {
 					canAccess =
 						options.endpoints[payload.lvl].includes(resource);
 				}

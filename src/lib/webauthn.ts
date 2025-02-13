@@ -1,6 +1,6 @@
 import {
 	generateAuthenticationOptions,
-	type PublicKeyCredentialCreationOptionsJSON,
+	type PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/server";
 import { nanoid } from "nanoid";
 import { jwtBuilder } from "@/lib/utils.ts";
@@ -12,7 +12,7 @@ export const passkeyRp = {
 };
 
 export async function createOptions() {
-	const passkeyOptions: PublicKeyCredentialCreationOptionsJSON =
+	const passkeyOptions: PublicKeyCredentialRequestOptionsJSON =
 		await generateAuthenticationOptions({
 			rpID: passkeyRp.id,
 		});

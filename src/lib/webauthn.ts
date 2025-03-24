@@ -1,6 +1,6 @@
 import {
 	generateAuthenticationOptions,
-	type PublicKeyCredentialRequestOptionsJSON,
+	PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/server";
 import { nanoid } from "nanoid";
 import { jwtBuilder } from "@/lib/utils.ts";
@@ -11,11 +11,16 @@ export const passkeyRp = {
 	origin: "https://lvoz2.duckdns.org",
 };
 
+interface PKCredRequestOptionsJSON
+	extends PublicKeyCredentialRequestOptionsJSON {
+	[propName: string]: unknown;
+}
+
 export async function createOptions() {
-	const passkeyOptions: PublicKeyCredentialRequestOptionsJSON =
-		await generateAuthenticationOptions({
+	const passkeyOptions: PKCredRequestOptionsJSON =
+		(await generateAuthenticationOptions({
 			rpID: passkeyRp.id,
-		});
+		})) as PKCredRequestOptionsJSON;
 	const jti = nanoid();
 	const jwt = await jwtBuilder.sign(passkeyOptions, {
 		jwtID: jti,

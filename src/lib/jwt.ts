@@ -49,6 +49,7 @@ export interface JWTProtectedHeadersLong {
 }
 
 export interface JWTPayloadLong {
+	[propName: string]: unknown;
 	audience?: string | string[];
 	expirationTime?: number | Date | string;
 	issuedAt?: number | Date | string;
@@ -62,9 +63,14 @@ export interface JWTSignOptions extends JWTPayloadLong {
 	protectedHeaders?: JWTProtectedHeadersLong;
 }
 
-export interface JWTVerifyOptions extends jose.JWTVerifyOptions {
-	critical?: object;
+export interface JWTVerifyOptionsLong extends jose.JWTVerifyOptions {
+	[propName: string]: unknown;
+	critical?: { [propName: string]: boolean };
 	type?: string;
+}
+
+export interface JWTVerifyOptions extends jose.JWTVerifyOptions {
+	[propName: string]: unknown;
 }
 
 export function betterIsJWT(jwt: string) {
@@ -104,23 +110,22 @@ export function betterIsJWT(jwt: string) {
 }
 
 export class JWT {
+	key: Uint8Array | jose.KeyLike | JWKLong;
+
 	constructor(key: Uint8Array | jose.KeyLike | JWKLong) {
 		this.key = key;
 	}
 
 	#shortJSONWebKey(JSONWebKey: JWKLong): jose.JWK {
-		const keys: string[] = Object.keys(JSONWebKey);
-		const shortened: jose.JWTHeaderParameters = {
+		if (JSONWebKey.algorithm == undefined) {
+			throw new Error("An algorithm is required in a JWK");
+		}
+		const shortened: jose.JWK = {
 			alg: JSONWebKey.algorithm,
+			kty: JSONWebKey.keyType,
 		};
-		for (const key in keys) {
+		for (const key in JSONWebKey) {
 			switch (key) {
-				case "keyType":
-					shortened.kty = JSONWebKey[key];
-					break;
-				case "algorithm":
-					shortened.alg = JSONWebKey[key];
-					break;
 				case "curve":
 					shortened.crv = JSONWebKey[key];
 					break;
@@ -173,7 +178,7 @@ export class JWT {
 					shortened.x5t = JSONWebKey[key];
 					break;
 				case "x509CertificateSHA256Thumbprint":
-					shortened["x52#S256"] = JSONWebKey[key];
+					shortened["x5t#S256"] = JSONWebKey[key];
 					break;
 				case "x509Url":
 					shortened.x5u = JSONWebKey[key];
@@ -183,20 +188,26 @@ export class JWT {
 					break;
 			}
 		}
+		return shortened;
 	}
 
 	#shortProtectedHeader(
 		protectedHeader: JWTProtectedHeadersLong
 	): jose.JWTHeaderParameters {
-		const shortened: jose.JWTHeaderParameters = {};
+		const shortened: jose.JWTHeaderParameters = {
+			alg: protectedHeader.algorithm,
+		};
 		for (const key in protectedHeader) {
 			switch (key) {
-				case "algorithm":
-					shortened.alg = protectedHeader[key];
+				case "useBase64UrlEncoding": {
+					if (
+						protectedHeader[key] != undefined &&
+						protectedHeader[key]
+					) {
+						shortened.b64 = protectedHeader[key];
+					}
 					break;
-				case "useBase64UrlEncoding":
-					shortened.b64 = protectedHeader[key];
-					break;
+				}
 				case "critical":
 					shortened.crit = protectedHeader[key];
 					break;
@@ -206,9 +217,14 @@ export class JWT {
 				case "JWKSetUrl":
 					shortened.jku = protectedHeader[key];
 					break;
-				case "JSONWebKey":
-					shortened.jwk = this.#shortJSONWebKey(protectedHeader[key]);
+				case "JSONWebKey": {
+					if (protectedHeader[key] != undefined) {
+						shortened.jwk = this.#shortJSONWebKey(
+							protectedHeader[key]
+						);
+					}
 					break;
+				}
 				case "keyID":
 					shortened.kid = protectedHeader[key];
 					break;
@@ -229,43 +245,106 @@ export class JWT {
 		return shortened;
 	}
 
-	async sign(payload: object, options?: JWTSignOptions): Promise<string> {
+	get isKeyLong() {
+		const JWKKeys = [
+			"keyType",
+			"algorithm",
+			"curve",
+			"privateExponent",
+			"firstFactorCRTExponent",
+			"secondFactorCRTExponent",
+			"exponent",
+			"extractable",
+			"keyValue",
+			"keyOperations",
+			"keyID",
+			"modulus",
+			"firstPrimeFactor",
+			"secondPrimeFactor",
+			"firstCRTCoefficient",
+			"publicKeyUse",
+			"xCoordinate",
+			"x509CertificateChain",
+			"x509CertificateSHA1Thumbprint",
+			"x509CertificateSHA256Thumbprint",
+			"x509Url",
+			"yCoordinate",
+		];
+		const isJWKLong = JWKKeys.reduce((acc, cur) => {
+			return acc || Object.hasOwnProperty.call(this.key, cur);
+		}, false);
+		return isJWKLong;
+	}
+
+	async sign(payload: JWTPayload, options?: JWTSignOptions): Promise<string> {
 		const jwt = await new jose.SignJWT(payload);
 		if (options != undefined) {
 			for (const key in options) {
 				switch (key) {
-					case "audience":
-						jwt.setAudience(options[key]);
+					case "audience": {
+						if (options[key] != undefined) {
+							jwt.setAudience(options[key]);
+						}
 						break;
-					case "expirationTime":
-						jwt.setExpirationTime(options[key]);
+					}
+					case "expirationTime": {
+						if (options[key] != undefined) {
+							jwt.setExpirationTime(options[key]);
+						}
 						break;
-					case "issuedAt":
-						jwt.setIssuedAt(options[key]);
+					}
+					case "issuedAt": {
+						if (options[key] != undefined) {
+							jwt.setIssuedAt(options[key]);
+						}
 						break;
-					case "issuer":
-						jwt.setIssuer(options[key]);
+					}
+					case "issuer": {
+						if (options[key] != undefined) {
+							jwt.setIssuer(options[key]);
+						}
 						break;
-					case "jwtID":
-						jwt.setJti(options[key]);
+					}
+					case "jwtID": {
+						if (options[key] != undefined) {
+							jwt.setJti(options[key]);
+						}
 						break;
-					case "notBefore":
-						jwt.setNotBefore(options[key]);
+					}
+					case "notBefore": {
+						if (options[key] != undefined) {
+							jwt.setNotBefore(options[key]);
+						}
 						break;
-					case "protectedHeader":
-						jwt.setProtectedHeader(
-							this.#shortProtectedHeader(options[key])
-						);
+					}
+					case "protectedHeaders": {
+						if (options[key] != undefined) {
+							jwt.setProtectedHeader(
+								this.#shortProtectedHeader(options[key])
+							);
+						}
 						break;
-					case "subject":
-						jwt.setSubject(options[key]);
+					}
+					case "subject": {
+						if (options[key] != undefined) {
+							jwt.setSubject(options[key]);
+						}
 						break;
+					}
 				}
 			}
 		}
 		try {
-			const jwtString = await jwt.sign(this.key);
-			return jwtString;
+			if (this.isKeyLong) {
+				const key = this.#shortJSONWebKey(this.key as JWKLong);
+				const jwtString = await jwt.sign(key);
+				return jwtString;
+			} else {
+				const jwtString = await jwt.sign(
+					this.key as jose.KeyLike | Uint8Array | jose.JWK
+				);
+				return jwtString;
+			}
 		} catch (err) {
 			if (err instanceof jose.errors.JWSInvalid) {
 				const msg = err.toString();
@@ -275,8 +354,16 @@ export class JWT {
 				) {
 					const alg = "HS256";
 					jwt.setProtectedHeader({ alg });
-					const jwtString = await jwt.sign(this.key);
-					return jwtString;
+					if (this.isKeyLong) {
+						const key = this.#shortJSONWebKey(this.key as JWKLong);
+						const jwtString = await jwt.sign(key);
+						return jwtString;
+					} else {
+						const jwtString = await jwt.sign(
+							this.key as jose.KeyLike | Uint8Array | jose.JWK
+						);
+						return jwtString;
+					}
 				} else {
 					throw err;
 					return "";
@@ -290,7 +377,7 @@ export class JWT {
 
 	async verify(
 		jwt: string | Uint8Array,
-		options?: JWTVerifyOptions
+		options?: JWTVerifyOptionsLong
 	): Promise<
 		| { payload: undefined; protectedHeader: undefined }
 		| jose.JWTVerifyResult
@@ -299,11 +386,10 @@ export class JWT {
 			throw new Error("First argument must look like a valid JWT");
 			return {payload: undefined, protectedHeader: undefined};
 		}*/
-		let shortOptions = undefined;
+		let shortOptions: undefined | JWTVerifyOptions = undefined;
 		if (options != undefined) {
 			shortOptions = {};
-			const keys = Object.keys(options);
-			for (const key in keys) {
+			for (const key in options) {
 				switch (key) {
 					case "critical":
 						shortOptions.crit = Object.hasOwnProperty.call(
@@ -327,8 +413,19 @@ export class JWT {
 			}
 		}
 		try {
-			const result = await jose.jwtVerify(jwt, this.key, shortOptions);
-			return result;
+			// Need to verify if this.key is a JWKLong, then recast depending on this to stop tsc screaming at us
+			if (this.isKeyLong) {
+				const key = this.#shortJSONWebKey(this.key as JWKLong);
+				const result = await jose.jwtVerify(jwt, key, shortOptions);
+				return result;
+			} else {
+				const result = await jose.jwtVerify(
+					jwt,
+					this.key as Uint8Array | jose.KeyLike,
+					shortOptions
+				);
+				return result;
+			}
 		} catch (err) {
 			console.log(err);
 			if (err instanceof jose.errors.JWSSignatureVerificationFailed) {

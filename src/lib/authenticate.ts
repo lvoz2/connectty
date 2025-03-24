@@ -12,12 +12,14 @@ import { getDB, queryDB } from "@/lib/db.ts";
 import * as jose from "jose";
 
 export interface JWTAuthPayloadLong extends JWTPayloadLong {
+	[propName: string]: unknown;
 	usr: string;
 	lvl: string;
 	urls?: string[];
 }
 
 export interface JWTAuthPayload extends jose.JWTPayload {
+	[propName: string]: unknown;
 	usr: string;
 	lvl: string;
 	urls?: string[];
@@ -171,7 +173,7 @@ class Authenticate {
 		urls?: string[]
 	): Promise<string> {
 		const jti = nanoid();
-		const payload: JWTAuthPayloadLong = { usr: username, lvl: lvl };
+		const payload: JWTAuthPayload = { usr: username, lvl: lvl };
 		if (Array.isArray(urls)) {
 			payload.urls = urls;
 		}

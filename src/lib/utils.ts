@@ -1,5 +1,5 @@
 import validator from "validator";
-import { matchPattern } from "url-matcher";
+import UrlPattern from "url-pattern";
 import JWT from "@/lib/jwt.ts";
 import { Buffer } from "buffer";
 
@@ -42,7 +42,8 @@ export const jwtBuilder = new JWT.JWT(
 export function urlMatchArray(urlArray: string[], path: string) {
 	let matched = false;
 	for (const url of urlArray) {
-		matched = matchPattern(url, path) != undefined;
+		const pattern = new UrlPattern(url);
+		matched = pattern.match(path) != null;
 		if (matched) {
 			break;
 		}

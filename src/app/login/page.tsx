@@ -10,7 +10,7 @@ export default function Page() {
 		<div className="flex flex-row min-h-screen w-screen justify-center items-center">
 			<div
 				id="loginCard"
-				className="card px-8 py-6 rounded-lg bg-gray-800 w-72"
+				className="card px-8 py-6 rounded-lg bg-gray-800 w-[364px]"
 			>
 				<h1 className="text-center font-bold text-3xl text-white">
 					Login

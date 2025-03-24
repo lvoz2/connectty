@@ -3,13 +3,13 @@
     "target": "ESNext",
     "lib": [
       "esnext",
-      "dom",
+      "dom"
     ],
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "baseUrl": "./",
+    "baseUrl": ".",
     "typeRoots": [
-      "./node_modules/@types",
+      "./node_modules/@types"
     ],
     "allowImportingTsExtensions": true,
     "declaration": false,
@@ -31,18 +31,20 @@
         "name": "next"
       }
     ],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "exclude": [
     "node_modules/**/*",
-    "node_modules/next",
+    "node_modules/next"
   ],
   "include": [
+    "env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "env.d.ts",
+    ".next/types/**/*.ts"
   ]
 }

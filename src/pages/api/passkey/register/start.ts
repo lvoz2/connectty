@@ -13,9 +13,11 @@ import { type JWTPayloadLong, type JWTPayload } from "@/lib/jwt.ts";
 
 const db = getDB();
 
-interface PKCredCreationOptionsJSONJWTPayload
+interface PKCredCreationOptionsJSON
 	extends PublicKeyCredentialCreationOptionsJSON,
-		JWTPayloadLong {}
+		JWTPayloadLong {
+	[propName: string]: unknown;
+}
 
 export default async function handler(
 	req: NextApiRequest,
@@ -80,14 +82,14 @@ export default async function handler(
 		} else {
 			excludeCredentials = [];
 		}
-		const passkeyOptions: PKCredCreationOptionsJSONJWTPayload =
-			await generateRegistrationOptions({
+		const passkeyOptions: PKCredCreationOptionsJSON =
+			(await generateRegistrationOptions({
 				rpName: passkeyRp.name,
 				rpID: passkeyRp.id,
 				userName: username,
 				attestationType: "none",
 				excludeCredentials: excludeCredentials,
-			});
+			})) as PKCredCreationOptionsJSON;
 		const jti = nanoid();
 		const jwt = await jwtBuilder.sign(passkeyOptions, {
 			jwtID: jti,

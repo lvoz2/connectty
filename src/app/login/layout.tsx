@@ -11,11 +11,6 @@ export default function RootLayout({
 					src="https://unpkg.com/react-scan/dist/auto.global.js"
 					async
 				/>
-				<script
-					src="https://challenges.cloudflare.com/turnstile/v0/api.js?compat=recaptcha"
-					async
-					defer
-				></script>
 			</head>
 			<body>{children}</body>
 		</html>

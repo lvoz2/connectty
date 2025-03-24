@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check": "npx prettier --write src && npx eslint src/** --fix && tsc"
   },
   "repository": {
     "type": "git",
@@ -20,9 +21,9 @@
   },
   "homepage": "https://github.com/lvoz2/ts-server#readme",
   "dependencies": {
+    "@marsidev/react-turnstile": "^1.1.0",
     "@simplewebauthn/browser": "^13.0.0",
     "@simplewebauthn/server": "^13.0.0",
-    "@types/cloudflare-turnstile": "^0.2.2",
     "argon2": "^0.41.1",
     "buffer": "^6.0.3",
     "dotenv": "^16.4.5",
@@ -38,7 +39,7 @@
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "ssh2": "^1.16.0",
-    "url-matcher": "^0.2.2",
+    "url-pattern": "^1.0.3",
     "uuid": "^11.0.2",
     "validator": "^13.12.0",
     "ws": "^8.18.0"
@@ -49,6 +50,7 @@
     "@babel/preset-env": "^7.26.0",
     "@babel/preset-typescript": "^7.26.0",
     "@eslint/js": "^9.20.0",
+    "@types/cloudflare-turnstile": "^0.2.2",
     "@types/connect-sqlite3": "^0.9.5",
     "@types/cookie-parser": "^1.4.7",
     "@types/isomorphic-fetch": "^0.0.39",

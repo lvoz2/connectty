@@ -23,7 +23,7 @@
   "dependencies": {
     "@marsidev/react-turnstile": "^1.1.0",
     "@simplewebauthn/browser": "^13.0.0",
-    "@simplewebauthn/server": "^13.0.0",
+    "@simplewebauthn/server": "^13.3.2",
     "argon2": "^0.41.1",
     "buffer": "^6.0.3",
     "dotenv": "^16.4.5",
